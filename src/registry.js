@@ -14,7 +14,7 @@ db.exec(SCHEMA);
 export const status = { running: false, current: null, rows: 0, lastError: null, lastFinished: null, startedAt: null };
 
 const Q = {
-  byVin: db.prepare(`SELECT r.d, r.oper, o.name opname, b.v brand, m.v model, r.year, c.v color, k.v kind, bd.v body, f.v fuel, r.cap, dp.v dep, r.plate, r.person
+  byVin: db.prepare(`SELECT r.d, r.oper, o.name opname, b.v brand, m.v model, r.year, c.v color, k.v kind, bd.v body, f.v fuel, r.cap, dp.v dep, r.plate
     FROM reg r LEFT JOIN ops o ON o.code=r.oper LEFT JOIN dict b ON b.id=r.brand LEFT JOIN dict m ON m.id=r.model LEFT JOIN dict c ON c.id=r.color
     LEFT JOIN dict k ON k.id=r.kind LEFT JOIN dict bd ON bd.id=r.body LEFT JOIN dict f ON f.id=r.fuel LEFT JOIN dict dp ON dp.id=r.dep
     WHERE r.vin=? ORDER BY r.d, r.rowid`),

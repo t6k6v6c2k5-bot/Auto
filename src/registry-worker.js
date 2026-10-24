@@ -72,6 +72,7 @@ async function main() {
     try {
       const res = await fetch(s.url, { headers: UA, redirect: 'follow' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!/(^|\.)data\.gov\.ua$/.test(new URL(res.url).hostname)) throw new Error('unexpected host ' + new URL(res.url).hostname);
       const stream = s.kind === 'zip' ? unzipFirstEntry(res.body) : (await import('node:stream')).Readable.fromWeb(res.body);
       const dec = new TextDecoder('utf-8'); let tail = '', header = null, delim = ';', idx = {}, n = 0, dmin = 99999999, dmax = 0;
       db.exec('BEGIN');
@@ -96,13 +97,20 @@ async function main() {
         if (code !== null && oname) insOp.run(code, oname.trim());
         const plate = idx.plate >= 0 && c[idx.plate] ? normalizePlate(c[idx.plate]) : null;
         const num = (i) => (i >= 0 && c[i] && !Number.isNaN(+c[i]) ? +c[i] : null);
-        insReg.run(vin, d, code, D(c[idx.brand]), D(c[idx.model]), num(idx.year), D(c[idx.color]), D(c[idx.kind]), D(c[idx.body]), D(c[idx.fuel]), num(idx.cap), D(c[idx.dep]), plate, c[idx.person] || null, id);
+        insReg.run(vin, d, code, D(c[idx.brand]), D(c[idx.model]), num(idx.year), D(c[idx.color]), D(c[idx.kind]), D(c[idx.body]), D(c[idx.fuel]), num(idx.cap), D(c[idx.dep]), plate, null, id); // person (физлицо/юрлицо) намеренно не сохраняем
         if (d < dmin) dmin = d; if (d > dmax) dmax = d;
-        if (++n % 50000 === 0) { db.exec('COMMIT'); db.exec('BEGIN'); say({ type: 'progress', name: s.name, rows: n }); }
+        if (++n % 50000 === 0) {
+          db.exec('COMMIT'); db.exec('BEGIN'); say({ type: 'progress', name: s.name, rows: n });
+          if (statSync(dbPath).size > maxBytes) throw new Error('size limit reached');
+        }
       };
+      let bytes = 0;
       for await (const chunk of stream) {
+        bytes += chunk.length;
+        if (bytes > 2.5e9) throw new Error('source too large');           // защита от распаковки-бомбы
         const text = tail + dec.decode(chunk, { stream: true });
         const lines = text.split('\n'); tail = lines.pop();
+        if (tail.length > 1e6) throw new Error('line too long');
         for (const l of lines) handle(l.replace(/\r$/, ''));
       }
       if (tail) handle(tail.replace(/\r$/, ''));

@@ -2,7 +2,7 @@
 const TTL = 6 * 3600e3;
 const cache = new Map();
 
-async function getJson(url, ms = 7000) {
+async function getJson(url, ms = 5000) {
   const hit = cache.get(url);
   if (hit && Date.now() - hit.t < TTL) return hit.v;
   const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { accept: 'application/json' } });
@@ -53,7 +53,7 @@ export async function complaints(d) {
   if (!d?.trusted) return { count: 0, unavailable: !!d?.unavailable };
   try {
     const q = new URLSearchParams({ make: d.make, model: d.model, modelYear: String(d.year) });
-    const j = await getJson(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`, 10000);
+    const j = await getJson(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`, 6000);
     const res = j.results || [];
     const comp = new Map();
     for (const x of res) for (const c of String(x.components || '').split(',')) { const k = c.trim(); if (k) comp.set(k, (comp.get(k) || 0) + 1); }

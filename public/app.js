@@ -1,8 +1,21 @@
 (() => {
   const lang = document.currentScript.dataset.lang;
   const safe = (f) => { try { return f(); } catch { return null; } };
+  const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const track = (name, props) => safe(() => window.plausible && window.plausible(name, { props }));
   document.documentElement.classList.add('js');
+
+  // ---------- Оверлей загрузки: текст подставляется при показе, фон недоступен (inert) ----------
+  const loader = $('#loader');
+  const setBusy = (on) => {
+    if (!loader) return;
+    const p = $('p', loader); if (on) p.textContent = loader.dataset.text; else p.textContent = '';
+    loader.hidden = !on;
+    ['header.top', 'main', 'footer'].forEach((sel) => { const el = $(sel); if (el) { on ? el.setAttribute('inert', '') : el.removeAttribute('inert'); } });
+    document.body.setAttribute('aria-busy', on ? 'true' : 'false');
+  };
+  window.addEventListener('pageshow', () => setBusy(false));
 
   // ---------- VIN / номер: нормализация и валидация (зеркалит src/vin.js и src/plate.js) ----------
   const TR = { A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9 };
@@ -21,87 +34,119 @@
     }
     return null;
   }
-  const loader = document.getElementById('loader');
-  window.addEventListener('pageshow', () => loader && loader.classList.remove('on'));
 
+  const recentKey = 'vs_recent';
+  const getRecent = () => safe(() => JSON.parse(localStorage.getItem(recentKey) || '[]').filter((x) => /^[A-Z0-9]{5,17}$/.test(x))) || [];
   $$('.vinform').forEach((form) => {
-    const input = form.querySelector('input[name=q]'), hint = form.querySelector('.hint'), cnt = form.querySelector('.cnt');
+    const input = $('input[name=q]', form), hint = $('.hint', form), cnt = $('.cnt', form), box = $('.searchbox', form);
     const modes = $$('.modes span', form), msg = JSON.parse(input.dataset.msg);
     const setMode = (m) => modes.forEach((el) => el.classList.toggle('on', el.dataset.mode === m));
+    const show = (text, kind) => { hint.textContent = text; hint.className = 'hint' + (kind ? ' ' + kind : ''); const bad = kind === 'err'; box.classList.toggle('invalid', bad); input.setAttribute('aria-invalid', bad ? 'true' : 'false'); };
     const update = (final) => {
       const raw = input.value; const v = latin(raw);
       cnt.textContent = alnum(raw).length + '/17';
-      hint.className = 'hint';
-      if (!v) { hint.textContent = ''; setMode(null); return false; }
-      if (v.length < 17 && isPlate(v)) { setMode('plate'); hint.textContent = '✓ ' + msg.plate; hint.className = 'hint ok'; return true; }
+      if (!v) { show('', ''); setMode(null); return false; }
+      if (v.length < 17 && isPlate(v)) { setMode('plate'); show('✓ ' + msg.plate, 'ok'); return true; }
       setMode(/\d/.test(v) && v.length > 8 ? 'vin' : null);
       const e = vinError(v);
-      if (!e) { setMode('vin'); hint.textContent = '✓ ' + msg.ok; hint.className = 'hint ok'; return true; }
-      hint.textContent = (final || v.length >= 17) ? msg[e] : '';
+      if (!e) { setMode('vin'); show('✓ ' + msg.ok, 'ok'); return true; }
+      show((final || v.length >= 17) ? (e === 'bad' ? msg.bad : msg[e]) : '', (final || v.length >= 17) ? 'err' : '');
       return false;
     };
     input.addEventListener('input', () => update(false));
     form.addEventListener('submit', (ev) => {
       if (!update(true)) { ev.preventDefault(); input.focus(); return; }
       const v = latin(input.value); input.value = v;
-      safe(() => { const r = JSON.parse(localStorage.getItem('vs_recent') || '[]').filter((x) => x !== v); r.unshift(v); localStorage.setItem('vs_recent', JSON.stringify(r.slice(0, 4))); });
-      if (loader) loader.classList.add('on');
+      safe(() => { const r = getRecent().filter((x) => x !== v); r.unshift(v); localStorage.setItem(recentKey, JSON.stringify(r.slice(0, 4))); });
+      track('search', { type: isPlate(v) && v.length < 17 ? 'plate' : 'vin' });
+      setBusy(true);
     });
     $$('[data-fill]', form).forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.fill; update(false); input.focus(); }));
     update(false);
-    const box = form.querySelector('.recent');
-    const r = safe(() => JSON.parse(localStorage.getItem('vs_recent') || '[]')) || [];
-    if (box) box.innerHTML = r.map((x) => `<a href="/${lang}/check?q=${encodeURIComponent(x)}">${x}</a>`).join('');
-    $$('a', box || document.createElement('div')).forEach((a) => a.addEventListener('click', () => loader && loader.classList.add('on')));
+    const rec = $('.recent', form);
+    const EX = ['1HGCM82633A004352', 'AA1234BB'];
+    if (rec) getRecent().filter((x) => !EX.includes(x)).forEach((x) => { const a = document.createElement('a'); a.href = `/${lang}/check?q=${encodeURIComponent(x)}`; a.textContent = x; a.addEventListener('click', () => setBusy(true)); rec.appendChild(a); });
   });
 
   // ---------- Лист ожидания ----------
   $$('form.notify').forEach((f) => f.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const msgEl = f.parentElement.querySelector('.notify-msg'); const btn = f.querySelector('button'); btn.disabled = true;
+    const msgEl = $('.notify-msg', f.parentElement); const btn = $('button', f); btn.disabled = true;
     try {
-      const r = await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: f.email.value.trim(), lang: f.dataset.lang }) });
+      const r = await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: f.email.value.trim(), lang: f.dataset.lang, utm: location.search.slice(0, 200) }) });
       if (!r.ok) throw new Error((await r.json()).error || 'error');
-      msgEl.className = 'good notify-msg'; msgEl.textContent = '✓ ' + f.dataset.ok; f.reset();
+      msgEl.className = 'good notify-msg'; msgEl.textContent = '✓ ' + f.dataset.ok; f.reset(); track('waitlist');
     } catch (e) { msgEl.className = 'err notify-msg'; msgEl.textContent = e.message; }
     btn.disabled = false;
   }));
 
-  // ---------- Оформление ----------
-  const co = document.getElementById('co');
+  // ---------- Оформление (платный режим) ----------
+  const co = $('#co');
   if (co) co.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const err = document.getElementById('coerr'), btn = co.querySelector('button');
+    const err = $('#coerr'), btn = $('button[type=submit]', co);
     const body = { lang, plan: co.dataset.plan, vin: latin(co.vin.value), email: co.email.value.trim(), code: co.code ? co.code.value.trim() : '' };
-    err.textContent = ''; btn.disabled = true; if (loader) loader.classList.add('on');
+    err.textContent = ''; btn.disabled = true; setBusy(true);
     try {
       const r = await fetch('/api/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'error');
       location.href = j.url;
-    } catch (e) { err.textContent = e.message; btn.disabled = false; if (loader) loader.classList.remove('on'); }
+    } catch (e) { err.textContent = e.message; co.email.setAttribute('aria-invalid', 'true'); btn.disabled = false; setBusy(false); }
   });
 
-  // ---------- Отчёт: ссылка, автообновление ----------
-  const sh = document.getElementById('share');
-  if (sh) sh.addEventListener('click', async () => { await safe(() => navigator.clipboard.writeText(location.href)); const o = sh.textContent; sh.textContent = '✓ ' + sh.dataset.ok; setTimeout(() => (sh.textContent = o), 1800); });
-  if (document.querySelector('[data-poll]')) setTimeout(() => location.reload(), 3000);
+  // ---------- Фото: при ошибке загрузки — силуэт ----------
+  $$('.photo img').forEach((img) => {
+    const fail = () => img.closest('.photo').classList.add('nophoto');
+    img.addEventListener('error', fail);
+    if (img.complete && img.naturalWidth === 0) fail();
+  });
 
-  // ---------- Липкая кнопка (мобильный), меню, появление секций ----------
-  const sticky = document.getElementById('sticky');
+  // ---------- Печать и «скопировать ссылку» ----------
+  $$('[data-print]').forEach((b) => b.addEventListener('click', () => { track('print'); window.print(); }));
+  window.addEventListener('beforeprint', () => $$('details').forEach((d) => d.setAttribute('open', '')));
+  const sh = $('#share');
+  if (sh) sh.addEventListener('click', async () => {
+    await safe(() => navigator.clipboard.writeText(location.href)); track('share');
+    const o = sh.textContent; sh.textContent = '✓ ' + sh.dataset.ok; setTimeout(() => (sh.textContent = o), 1800);
+  });
+
+  // ---------- Ожидание отчёта: опрос с нарастающим интервалом и лимитом ----------
+  const poll = $('[data-poll]');
+  if (poll) {
+    let n = 0;
+    const tick = async () => {
+      if (++n > 10) return;
+      await new Promise((r) => setTimeout(r, Math.min(2000 * n, 8000)));
+      const html = await safe(async () => (await fetch(location.href, { headers: { accept: 'text/html' } })).text());
+      if (html && !html.includes('data-poll')) { const doc = new DOMParser().parseFromString(html, 'text/html'); $('main').innerHTML = doc.querySelector('main').innerHTML; return; }
+      tick();
+    };
+    tick();
+  }
+
+  // ---------- Липкая кнопка (мобильный): показываем после прокрутки, до этого она скрыта и недоступна ----------
+  const sticky = $('#sticky');
   if (sticky) {
     document.body.classList.add('has-sticky');
-    const onScroll = () => sticky.classList.toggle('on', window.scrollY > 320);
+    const onScroll = () => { const on = window.scrollY > 320; sticky.hidden = !on; sticky.classList.toggle('on', on); };
     window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    $('a', sticky).addEventListener('click', () => track('unlock'));
   }
-  const menu = document.querySelector('details.menu');
+
+  // ---------- Меню: закрытие, возврат фокуса ----------
+  const menu = $('details.menu');
   if (menu) {
     document.addEventListener('click', (e) => { if (!menu.contains(e.target)) menu.removeAttribute('open'); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') menu.removeAttribute('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.open) { menu.removeAttribute('open'); $('summary', menu).focus(); } });
+    $$('.sheet a', menu).forEach((a) => a.addEventListener('click', () => menu.removeAttribute('open')));
   }
+
+  // ---------- Плавное появление секций ----------
   const rev = $$('.reveal');
   if ('IntersectionObserver' in window && rev.length) {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
     rev.forEach((el) => io.observe(el));
   } else rev.forEach((el) => el.classList.add('in'));
+  if (location.hash === '#notify') track('pricing_notify_click');
 })();

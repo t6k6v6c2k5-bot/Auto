@@ -31,12 +31,13 @@ export const createCheckout = ({ order, name, description, successUrl, cancelUrl
 export const getSession = (id) => call('GET', '/checkout/sessions/' + encodeURIComponent(id));
 export const refund = (paymentIntent) => call('POST', '/refunds', { payment_intent: paymentIntent });
 
-// Проверка подписи вебхука Stripe (без SDK)
+// Проверка подписи вебхука Stripe (без SDK): допускает несколько v1 (ротация секрета), окно 5 минут
 export function verifyWebhook(raw, header) {
   if (!cfg.stripeWebhookSecret || !header) return false;
-  const parts = Object.fromEntries(header.split(',').map((p) => p.split('=')));
-  if (!parts.t || !parts.v1 || Math.abs(Date.now() / 1000 - Number(parts.t)) > 600) return false;
-  const exp = createHmac('sha256', cfg.stripeWebhookSecret).update(`${parts.t}.${raw}`).digest('hex');
-  const a = Buffer.from(exp), b = Buffer.from(parts.v1);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const parts = header.split(',').map((p) => p.trim().split('='));
+  const ts = Number(parts.find((p) => p[0] === 't')?.[1]);
+  const sigs = parts.filter((p) => p[0] === 'v1').map((p) => p[1]).filter(Boolean);
+  if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300 || !sigs.length) return false;
+  const exp = Buffer.from(createHmac('sha256', cfg.stripeWebhookSecret).update(`${ts}.${raw}`).digest('hex'));
+  return sigs.some((x) => { const b = Buffer.from(x); return b.length === exp.length && timingSafeEqual(exp, b); });
 }

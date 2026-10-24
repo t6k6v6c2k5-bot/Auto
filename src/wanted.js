@@ -23,6 +23,7 @@ export async function refreshWanted() {
     const { url, modified } = await resolveUrl();
     const r = await fetch(url, { headers: UA, redirect: 'follow', signal: AbortSignal.timeout(120000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (Number(r.headers.get('content-length')) > 200e6) throw new Error('dataset too large');
     const rows = await r.json();
     const v = new Map(), p = new Map();
     const push = (m, k, rec) => { if (k.length >= 5) { const a = m.get(k); if (a) a.push(rec); else m.set(k, [rec]); } };

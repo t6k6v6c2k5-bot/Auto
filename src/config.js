@@ -1,6 +1,6 @@
 export const cfg = {
   port: Number(process.env.PORT) || 3000,
-  baseUrl: (process.env.BASE_URL || '').replace(/\/$/, ''),
+  baseUrl: (process.env.BASE_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : '')).replace(/\/$/, ''),
   dbPath: process.env.DB_PATH || './data/vinscope.db',
   registryDbPath: process.env.REGISTRY_DB_PATH || (process.env.DB_PATH ? process.env.DB_PATH.replace(/[^/]*$/, 'registry.db') : './data/registry.db'),
   registryFromYear: Number(process.env.REGISTRY_FROM_YEAR) || 2021,
@@ -10,7 +10,9 @@ export const cfg = {
   adminKey: process.env.ADMIN_KEY || '',
   reportApiUrl: process.env.REPORT_API_URL || '',   // URL вашего поставщика данных (Copart/IAAI/NMVTIS/ЕС)
   reportApiKey: process.env.REPORT_API_KEY || '',
-  supportEmail: process.env.SUPPORT_EMAIL || 'support@vinscope.example',
+  supportEmail: process.env.SUPPORT_EMAIL || '',            // не показываем вымышленный адрес: задайте реальный
+  operatorName: process.env.OPERATOR_NAME || '',            // ФОП/ТОВ, ЄДРПОУ, адреса — для оферты
+  operatorDetails: process.env.OPERATOR_DETAILS || '',
   plausible: process.env.PLAUSIBLE_DOMAIN || '',
 };
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.

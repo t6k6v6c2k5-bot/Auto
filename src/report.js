@@ -18,21 +18,47 @@ function consistency(decoded, ua) {
   return out;
 }
 
+// Фото модели берём из Wikipedia: в имени файла обычно есть год. Если он сильно расходится с годом авто, лучше показать силуэт.
+const photoYear = (url) => { const m = /(?:^|[/_-])((?:19|20)\d{2})(?=[_\-.\s]|$)/.exec(decodeURIComponent(url || '').split('/').pop() || ''); return m ? +m[1] : null; };
+export function photoFits(photo, year) {
+  if (!photo) return null;
+  const py = photoYear(photo.url);
+  if (py && year && Math.abs(py - year) > 5) return null;
+  return photo;
+}
+
+const withDeadline = (p, ms, fallback) => Promise.race([p, new Promise((r) => setTimeout(() => r(fallback), ms))]);
+
 export async function buildReport(vin, { withProvider = false, plan = 'single' } = {}) {
-  const decoded = await decodeVin(vin);
-  const [rec, comp, rate] = await Promise.all([getRecalls(decoded), getComplaints(decoded), getRatings(decoded)]);
+  const t0 = Date.now();
+  const decoded = await withDeadline(decodeVin(vin), 6000, { found: false, unavailable: true });
+  const left = () => Math.max(1500, 9000 - (Date.now() - t0));
+  const [rec, comp, rate] = await Promise.all([
+    withDeadline(getRecalls(decoded), left(), { items: [], unavailable: true }),
+    withDeadline(getComplaints(decoded), left(), { count: 0, unavailable: true }),
+    withDeadline(getRatings(decoded), left(), null),
+  ]);
   const region = regionOf(vin);
   const ua = historyByVin(vin);
   const wanted = wantedByVin(vin);
   const mismatch = consistency(decoded, ua);
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch });
   const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : { make: decoded.make };
-  const photo = veh.make ? await Promise.race([getPhoto(veh.make, veh.model), new Promise((r) => setTimeout(() => r(null), 3500))]) : null;
+  const photo = veh.make ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 3000, null), veh.year) : null;
   let usa = null;
   if (withProvider) { try { usa = await fetchProvider(vin, plan, decoded); } catch (e) { console.error('provider failed', e.message); } }
   const found = Boolean(decoded.trusted || decoded.found || ua.rows.length || wanted.length || usa?.found);
+  // «Что делать дальше»: ключи i18n, собранные из реальных результатов
+  const next = [];
+  if (wanted.length) next.push('c_wanted');
+  else {
+    if (mismatch.length) next.push('c_mismatch');
+    if (rec.items.length) next.push('c_recalls');
+    if (!ua.rows.length) next.push('c_nocover');
+    next.push('c_default');
+  }
   return {
-    vin, region, generatedAt: new Date().toISOString(), found,
+    vin, region, generatedAt: new Date().toISOString(), found, next,
     vehicle: veh, photo, decoded, recalls: rec, complaints: comp, ratings: rate, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };

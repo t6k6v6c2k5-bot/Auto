@@ -5,8 +5,10 @@ import * as store from './db.js';
 const UA = { 'user-agent': 'VINScope/1.0 (vehicle check; contact: support@vinscope.example)', accept: 'application/json' };
 const CAR_RE = /\b(car|automobile|vehicle|suv|crossover|truck|pickup|van|minivan|sedan|hatchback|coupe|coupé|wagon|estate|convertible|roadster|motorcycle|bus|model)\b/i;
 const FOUND_TTL = 90 * 864e5, MISS_TTL = 7 * 864e5;
+const OK_IMG = /^https:\/\/(?:upload|thumb)\.wikimedia\.org\//, OK_PAGE = /^https:\/\/en\.wikipedia\.org\//;
+const safe = (v) => (v && OK_IMG.test(v.url) && OK_PAGE.test(v.page) ? v : null);
 const mem = new Map();
-let chain = Promise.resolve(), blockedUntil = 0;
+let chain = Promise.resolve(), blockedUntil = 0, queued = 0;
 
 const titleCase = (s) => s.toLowerCase().replace(/(^|[\s-])([a-zа-яіїєґ])/g, (_, a, b) => a + b.toUpperCase());
 const brandVariants = (b) => {
@@ -27,7 +29,9 @@ function candidates(make, model) {
 }
 
 function limited(fn) {
-  const run = chain.then(async () => { await new Promise((r) => setTimeout(r, 250)); return fn(); });
+  if (queued >= 20) return Promise.resolve({ blocked: true }); // очередь ограничена: при наплыве фото просто не показываем
+  queued++;
+  const run = chain.then(async () => { await new Promise((r) => setTimeout(r, 250)); return fn(); }).finally(() => { queued--; });
   chain = run.catch(() => {});
   return run;
 }
@@ -51,7 +55,7 @@ export async function getPhoto(make, model) {
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);
-  if (row && Date.now() - row.ts < (row.url ? FOUND_TTL : MISS_TTL)) { const v = row.url ? { url: row.url, page: row.page, title: row.title } : null; mem.set(key, { t: Date.now(), v }); return v; }
+  if (row && Date.now() - row.ts < (row.url ? FOUND_TTL : MISS_TTL)) { const v = row.url ? safe({ url: row.url, page: row.page, title: row.title }) : null; mem.set(key, { t: Date.now(), v }); return v; }
   let result = null, blocked = false;
   for (const title of candidates(make, model)) {
     try {
@@ -60,6 +64,7 @@ export async function getPhoto(make, model) {
       if (r) { result = r; break; }
     } catch { blocked = true; break; }
   }
+  result = safe(result);
   if (!blocked) store.setPhotoRow(key, result?.url || null, result?.page || null, result?.title || null);
   mem.set(key, { t: Date.now() - (blocked ? 5.9 * 3600e3 : 0), v: result }); // при блокировке повторим скоро
   return result;
