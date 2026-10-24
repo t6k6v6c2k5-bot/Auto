@@ -45,3 +45,35 @@ export async function recalls(d) {
     return { items: [], unavailable: true };
   }
 }
+
+// Жалобы владельцев (NHTSA ODI): статистика по марке/модели/году.
+export async function complaints(d) {
+  if (!d?.found) return { count: 0, unavailable: !!d?.unavailable };
+  try {
+    const q = new URLSearchParams({ make: d.make, model: d.model, modelYear: String(d.year) });
+    const j = await getJson(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`, 10000);
+    const res = j.results || [];
+    const comp = new Map();
+    for (const x of res) for (const c of String(x.components || '').split(',')) { const k = c.trim(); if (k) comp.set(k, (comp.get(k) || 0) + 1); }
+    return {
+      count: j.count ?? res.length,
+      crashes: res.filter((x) => x.crash).length, fires: res.filter((x) => x.fire).length,
+      injuries: res.reduce((a, x) => a + (x.numberOfInjuries || 0), 0), deaths: res.reduce((a, x) => a + (x.numberOfDeaths || 0), 0),
+      top: [...comp].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([component, n]) => ({ component, n })),
+      unavailable: false,
+    };
+  } catch { return { count: 0, unavailable: true }; }
+}
+
+// Краш-тесты NHTSA (5-star): берём первую комплектацию модели.
+export async function ratings(d) {
+  if (!d?.found) return null;
+  try {
+    const base = `https://api.nhtsa.gov/SafetyRatings/modelyear/${d.year}/make/${encodeURIComponent(d.make)}/model/${encodeURIComponent(d.model)}`;
+    const list = (await getJson(base)).Results || [];
+    if (!list.length) return null;
+    const r = (await getJson(`https://api.nhtsa.gov/SafetyRatings/VehicleId/${list[0].VehicleId}`)).Results?.[0];
+    if (!r) return null;
+    return { description: list[0].VehicleDescription, overall: r.OverallRating, front: r.OverallFrontCrashRating, side: r.OverallSideCrashRating, rollover: r.RolloverRating };
+  } catch { return null; }
+}

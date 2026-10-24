@@ -4,12 +4,13 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { timingSafeEqual } from 'node:crypto';
-import { cfg, PLANS, demoPayments, price } from './src/config.js';
-import { LANGS } from './src/i18n.js';
+import { cfg, PLANS, paywallOn, price } from './src/config.js';
+import { LANGS, dict } from './src/i18n.js';
 import { validateVin } from './src/vin.js';
-import { decodeVin, recalls } from './src/nhtsa.js';
-import { riskScore } from './src/risk.js';
-import { fetchReport, prescan, demoReport } from './src/providers.js';
+import { normalizePlate, looksLikePlate } from './src/plate.js';
+import { buildReport } from './src/report.js';
+import { startWanted, wantedByPlate, state as wantedState } from './src/wanted.js';
+import { startRegistry, vinsByPlate, coverage, status as regStatus } from './src/registry.js';
 import * as store from './src/db.js';
 import * as stripe from './src/stripe.js';
 import * as V from './src/views.js';
@@ -58,19 +59,19 @@ const pickLang = (req) => {
 async function fulfil(orderId) {
   const o = store.getOrder(orderId);
   if (!o || o.report || o.status === 'refunded') return o;
-  const decoded = await decodeVin(o.vin);
   let report;
-  try { report = await fetchReport(o.vin, o.plan, decoded); }
-  catch (e) { console.error('report provider failed', e.message); store.updateOrder(o.id, { status: 'paid', paid_at: Date.now() }); return store.getOrder(o.id); } // оплачено, отчёт догрузится при открытии
-  if (!report.found) {
+  try { report = await buildReport(o.vin, { withProvider: true, plan: o.plan }); }
+  catch (e) { console.error('report build failed', e.message); return store.getOrder(o.id); } // оплачено, отчёт соберётся при открытии
+  if (!report.found && paywallOn()) {
     // Ноу-хау №3: автовозврат, если по VIN нет данных
-    if (o.payment_intent && !demoPayments()) { try { await stripe.refund(o.payment_intent); } catch (e) { console.error('refund failed', e.message); } }
+    if (o.payment_intent) { try { await stripe.refund(o.payment_intent); } catch (e) { console.error('refund failed', e.message); } }
     store.updateOrder(o.id, { status: 'refunded' });
     return store.getOrder(o.id);
   }
-  const f = { report: JSON.stringify(report), status: o.status === 'credit' ? 'credit' : 'paid', paid_at: Date.now() };
+  const f = { report: JSON.stringify(report), paid_at: Date.now() };
+  if (o.status === 'pending') f.status = 'paid';
   const n = PLANS[o.plan]?.count || 1;
-  if (n > 1 && !o.credit_code) f.credit_code = store.newCredit(o.plan, n - 1, o.email);
+  if (paywallOn() && n > 1 && !o.credit_code) f.credit_code = store.newCredit(o.plan, n - 1, o.email);
   store.updateOrder(o.id, f);
   return store.getOrder(o.id);
 }
@@ -85,19 +86,23 @@ async function api(req, res, url) {
     const m = { uk: ['Невірний VIN', 'Невірний email', 'Код недійсний або вичерпаний'], ru: ['Неверный VIN', 'Неверный email', 'Код недействителен или исчерпан'], en: ['Invalid VIN', 'Invalid email', 'Code is invalid or used up'] }[lang];
     if (!plan || !v.ok) return json(req, res, 400, { error: m[0] });
     const email = String(b.email || '').trim().slice(0, 200);
-    if (!EMAIL.test(email)) return json(req, res, 400, { error: m[1] });
+    if (paywallOn() ? !EMAIL.test(email) : (email && !EMAIL.test(email))) return json(req, res, 400, { error: m[1] });
 
+    if (!paywallOn()) { // режим запуска: полный отчёт бесплатно
+      const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: 0, lang, status: 'free' });
+      await fulfil(o.id);
+      return json(req, res, 200, { url: `/${lang}/report/${o.token}` });
+    }
     if (b.code) { // оплата кодом пакета
       const c = store.getCredit(b.code);
       if (!c || c.remaining < 1 || !store.useCredit(c.code)) return json(req, res, 400, { error: m[2] });
-      const o = store.newOrder({ vin: v.vin, plan: 'full', email, amount: 0, lang, status: 'credit', credit_code: c.code });
+      const o = store.newOrder({ vin: v.vin, plan: 'single', email, amount: 0, lang, status: 'credit', credit_code: c.code });
       await fulfil(o.id);
       return json(req, res, 200, { url: `/${lang}/report/${o.token}` });
     }
     const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: plan.usd, lang });
-    if (demoPayments()) { store.updateOrder(o.id, { status: 'paid', paid_at: Date.now() }); await fulfil(o.id); return json(req, res, 200, { url: `/${lang}/report/${o.token}` }); }
     try {
-      const d = (await import('./src/i18n.js')).dict(lang).plans[b.plan];
+      const d = dict(lang).plans[b.plan];
       const s = await stripe.createCheckout({
         order: o, name: `VINScope — ${d[0]}`, description: `VIN ${v.vin}`,
         successUrl: `${origin(req)}/${lang}/success?o=${o.id}`, cancelUrl: `${origin(req)}/${lang}/checkout?plan=${b.plan}&vin=${v.vin}`,
@@ -106,33 +111,51 @@ async function api(req, res, url) {
       return json(req, res, 200, { url: s.url });
     } catch (e) { console.error('stripe', e.message); return json(req, res, 502, { error: 'Payment provider error' }); }
   }
+  if (req.method === 'POST' && url.pathname === '/api/notify') {
+    if (limited(ipOf(req), 10)) return json(req, res, 429, { error: 'Too many requests' });
+    let b; try { b = JSON.parse(await readBody(req)); } catch { return json(req, res, 400, { error: 'Bad request' }); }
+    const email = String(b.email || '').trim().slice(0, 200);
+    if (!EMAIL.test(email)) return json(req, res, 400, { error: 'Invalid email' });
+    store.addWaitlist(email, LANGS.includes(b.lang) ? b.lang : 'uk');
+    return json(req, res, 200, { ok: true });
+  }
+  if (req.method === 'GET' && url.pathname === '/api/status') {
+    return json(req, res, 200, { wanted: wantedState, registry: { ...coverage(), ...regStatus }, paywall: paywallOn() });
+  }
   if (req.method === 'GET' && url.pathname.startsWith('/api/vin/')) {
     const v = validateVin(url.pathname.slice(9));
     if (!v.ok) return json(req, res, 400, { error: v.error });
-    return json(req, res, 200, { vin: v.vin, region: v.region, decoded: await decodeVin(v.vin) });
+    const r = await buildReport(v.vin);
+    return json(req, res, 200, { vin: v.vin, region: v.region, decoded: r.decoded, risk: r.risk, wanted: r.wanted.length, registryRecords: r.ua.rows.length });
   }
   return json(req, res, 404, { error: 'Not found' });
 }
 
 async function page(req, res, url, lang, rest) {
   const html = (s, code = 200, cache = 'public, max-age=300') => send(req, res, code, s, 'text/html; charset=utf-8', { 'cache-control': cache });
-  if (rest === '/' || rest === '') return html(V.home(req, lang));
+  if (rest === '/' || rest === '') return html(V.home(req, lang, { wantedCount: wantedState.count }));
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
+  if (rest === '/sources') return html(V.sourcesPage(req, lang));
   if (rest === '/terms') return html(V.termsPage(req, lang));
 
   if (rest === '/check') {
     if (limited(ipOf(req), 40)) return send(req, res, 429, 'Too many requests', 'text/plain');
-    const v = validateVin(url.searchParams.get('vin'));
-    if (!v.ok) return redirect(res, `/${lang}/`);
-    store.logSearch(v.vin, lang);
-    const decoded = await decodeVin(v.vin);
-    const rec = await recalls(decoded);
-    const risk = riskScore(decoded, rec.items, decoded.year);
-    return html(V.checkPage(req, lang, { vin: v.vin, decoded, rec, risk, pre: prescan(v.vin, decoded) }), 200, 'private, max-age=0');
+    const raw = url.searchParams.get('q') || url.searchParams.get('vin') || '';
+    const v = validateVin(raw);
+    if (v.ok) {
+      store.logSearch(v.vin, lang);
+      return html(V.checkPage(req, lang, await buildReport(v.vin)), 200, 'private, max-age=0');
+    }
+    const plate = normalizePlate(raw);
+    if (!looksLikePlate(plate)) return redirect(res, `/${lang}/`);
+    store.logSearch(plate, lang);
+    const hit = vinsByPlate(plate)[0];
+    if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}`);
+    return html(V.plateNotFound(req, lang, plate, coverage(), wantedByPlate(plate)), 200, 'private, max-age=0');
   }
   if (rest === '/checkout') {
-    const plan = PLANS[url.searchParams.get('plan')] ? url.searchParams.get('plan') : 'full';
+    const plan = PLANS[url.searchParams.get('plan')] ? url.searchParams.get('plan') : 'single';
     return html(V.checkoutPage(req, lang, { plan, vin: (url.searchParams.get('vin') || '').toUpperCase().slice(0, 23) }), 200, 'no-store');
   }
   if (rest === '/success') {
@@ -146,26 +169,20 @@ async function page(req, res, url, lang, rest) {
     } catch (e) { console.error('success check', e.message); }
     return redirect(res, `/${lang}/report/${o.token}`);
   }
-  if (rest === '/sample') {
-    const vin = '1HGCM82633A004352'; const decoded = await decodeVin(vin);
-    const order = { vin, token: 'sample', status: 'paid', plan: 'full' };
-    return html(V.reportPage(req, lang, order, demoReport(vin, 'full', decoded), decoded));
-  }
   if (rest.startsWith('/report/')) {
     const o = store.getOrderByToken(rest.slice(8));
     if (!o) return html(V.notFound(req, lang), 404);
-    if (!o.report && o.status === 'paid') await fulfil(o.id).catch(() => {}); // догрузка, если поставщик был недоступен
+    if (!o.report && ['paid', 'free', 'credit'].includes(o.status)) await fulfil(o.id).catch(() => {}); // догрузка, если сборка упала
     const fresh = store.getOrder(o.id);
-    const decoded = await decodeVin(fresh.vin);
     const pack = fresh.credit_code ? store.getCredit(fresh.credit_code) : null;
     const view = { ...fresh, packLeft: pack && PLANS[fresh.plan]?.count > 1 ? pack.remaining : 0 };
-    return html(V.reportPage(req, lang, view, fresh.report ? JSON.parse(fresh.report) : null, decoded), 200, 'private, no-store');
+    return html(V.reportPage(req, lang, view, fresh.report ? JSON.parse(fresh.report) : null), 200, 'private, no-store');
   }
   return html(V.notFound(req, lang), 404);
 }
 
 function sitemap(req) {
-  const base = origin(req); const paths = ['/', '/usa', '/pricing', '/terms'];
+  const base = origin(req); const paths = ['/', '/usa', '/sources', '/pricing', '/terms'];
   const urls = paths.flatMap((p) => LANGS.map((l) => `<url><loc>${base}/${l}${p}</loc>${LANGS.map((a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${base}/${a}${p}"/>`).join('')}<changefreq>weekly</changefreq><priority>${p === '/' ? '1.0' : '0.7'}</priority></url>`));
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join('')}</urlset>`;
 }
@@ -177,7 +194,8 @@ function admin(req, res, url) {
   const s = store.stats();
   const rows = s.recent.map((r) => `<tr><td>${V.esc(r.id)}</td><td>${V.esc(r.vin)}</td><td>${V.esc(r.plan)}</td><td>${V.esc(r.status)}</td><td>${price(r.amount)}</td><td>${new Date(r.created_at).toISOString().slice(0, 16)}</td></tr>`).join('');
   send(req, res, 200, `<!doctype html><meta charset=utf-8><meta name=robots content=noindex><link rel=stylesheet href=/styles.css><body style="padding:24px"><h1>VINScope admin</h1>
-<p><b>Paid orders (Stripe):</b> ${s.paid.c} · <b>Revenue:</b> ${price(s.paid.s)} · <b>Searches:</b> ${s.searches} (7d: ${s.searches7})</p>
+<p><b>Paid orders (Stripe):</b> ${s.paid.c} · <b>Revenue:</b> ${price(s.paid.s)} · <b>Searches:</b> ${s.searches} (7d: ${s.searches7}) · <b>Waitlist:</b> ${s.waitlist}</p>
+<p><b>Wanted:</b> ${wantedState.count} (upd ${V.esc(wantedState.updatedAt)}) · <b>Registry:</b> ${V.esc(JSON.stringify(coverage()))} ${V.esc(JSON.stringify(regStatus))}</p>
 <p>${s.byStatus.map((x) => `${V.esc(x.status)}: ${x.c}`).join(' · ')}</p><p>Top VINs: ${s.topVins.map((x) => `${V.esc(x.vin)} (${x.c})`).join(', ')}</p>
 <table><tr><th>id<th>vin<th>plan<th>status<th>amount<th>created</tr>${rows}</table>`, 'text/html; charset=utf-8', { 'cache-control': 'no-store' });
 }
@@ -222,4 +240,7 @@ const server = createServer(async (req, res) => {
     if (!res.headersSent) send(req, res, 500, 'Internal error', 'text/plain');
   }
 });
-server.listen(cfg.port, '0.0.0.0', () => console.log(`VINScope on :${cfg.port} · payments=${demoPayments() ? 'DEMO' : 'stripe'}`));
+server.listen(cfg.port, '0.0.0.0', () => {
+  console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? 'on (stripe)' : 'off (launch mode)'}`);
+  startWanted(); startRegistry();
+});

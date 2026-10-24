@@ -18,26 +18,44 @@
   document.querySelectorAll('.vinform').forEach((form) => {
     const input = form.querySelector('input'), hint = form.querySelector('.hint'), cnt = form.querySelector('.cnt');
     const msg = JSON.parse(input.dataset.msg);
+    const MAP = { 'А':'A','В':'B','Е':'E','І':'I','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y' };
+    const plateNorm = (s) => [...s.toUpperCase()].map((c) => MAP[c] || c).join('').replace(/[^A-Z0-9]/g, '');
+    const isPlate = (p) => p.length >= 5 && p.length <= 8 && /\d/.test(p) && /[A-Z]/.test(p) && p.length !== 17 && /^(?:[A-Z]{2}\d{4}[A-Z]{2}|\d{5}[A-Z]{2,3}|\d{4}[A-Z]{2,3}|[A-Z]{2}\d{3,5}[A-Z]?|[A-Z]\d{4,6}[A-Z]{0,2})$/.test(p);
     const update = (final) => {
-      const v = norm(input.value); cnt.textContent = v.length + '/17';
-      if (!v) { hint.textContent = ''; hint.className = 'hint'; return false; }
-      const e = validate(v);
+      const raw = norm(input.value); cnt.textContent = raw.length + '/17';
+      if (!raw) { hint.textContent = ''; hint.className = 'hint'; return false; }
+      const p = plateNorm(input.value);
+      if (raw.length < 17 && isPlate(p)) { hint.textContent = '✓ ' + msg.plate; hint.className = 'hint ok'; return true; }
+      const e = validate(raw);
       if (!e) { hint.textContent = '✓ ' + msg.ok; hint.className = 'hint ok'; return true; }
       hint.className = 'hint';
-      hint.textContent = (final || v.length === 17) ? msg[e] : '';
+      hint.textContent = (final || raw.length >= 17) ? (e === 'length' ? msg.bad : msg[e]) : '';
       return false;
     };
     input.addEventListener('input', () => update(false));
     form.addEventListener('submit', (ev) => {
       if (!update(true)) { ev.preventDefault(); input.focus(); return; }
-      input.value = norm(input.value);
+      const rawV = norm(input.value);
+      input.value = rawV.length === 17 ? rawV : plateNorm(input.value);
       safe(() => { const r = JSON.parse(localStorage.getItem('vs_recent') || '[]').filter((x) => x !== input.value); r.unshift(input.value); localStorage.setItem('vs_recent', JSON.stringify(r.slice(0, 4))); });
     });
     update(false);
     const box = form.querySelector('.recent');
     const r = safe(() => JSON.parse(localStorage.getItem('vs_recent') || '[]')) || [];
-    if (box) box.innerHTML = r.map((x) => `<a href="/${lang}/check?vin=${encodeURIComponent(x)}">${x}</a>`).join('');
+    if (box) box.innerHTML = r.map((x) => `<a href="/${lang}/check?q=${encodeURIComponent(x)}">${x}</a>`).join('');
   });
+
+  // --- Waitlist ---
+  document.querySelectorAll('form.notify').forEach((f) => f.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msgEl = f.parentElement.querySelector('.notify-msg'); const btn = f.querySelector('button'); btn.disabled = true;
+    try {
+      const r = await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: f.email.value.trim(), lang: f.dataset.lang }) });
+      if (!r.ok) throw new Error((await r.json()).error || 'error');
+      msgEl.className = 'good notify-msg'; msgEl.textContent = '✓ ' + f.dataset.ok; f.reset();
+    } catch (e) { msgEl.className = 'err notify-msg'; msgEl.textContent = e.message; }
+    btn.disabled = false;
+  }));
 
   // --- Checkout ---
   const co = document.getElementById('co');
