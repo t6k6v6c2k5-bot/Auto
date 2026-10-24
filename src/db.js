@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS orders(
   credit_code TEXT, report TEXT, created_at INTEGER NOT NULL, paid_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS credits(code TEXT PRIMARY KEY, plan TEXT, remaining INTEGER NOT NULL, email TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS photos(key TEXT PRIMARY KEY, url TEXT, page TEXT, title TEXT, ts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS waitlist(email TEXT PRIMARY KEY, lang TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS searches(id INTEGER PRIMARY KEY AUTOINCREMENT, vin TEXT, lang TEXT, created_at INTEGER NOT NULL);
 `);
@@ -49,3 +50,6 @@ export const stats = () => ({
   recent: db.prepare('SELECT id,vin,plan,status,amount,created_at FROM orders ORDER BY created_at DESC LIMIT 20').all(),
   topVins: db.prepare('SELECT vin, COUNT(*) c FROM searches GROUP BY vin ORDER BY c DESC LIMIT 5').all(),
 });
+
+export const getPhotoRow = (key) => db.prepare('SELECT url,page,title,ts FROM photos WHERE key=?').get(key);
+export const setPhotoRow = (key, url, page, title) => db.prepare('INSERT OR REPLACE INTO photos(key,url,page,title,ts) VALUES(?,?,?,?,?)').run(key, url, page, title, Date.now());

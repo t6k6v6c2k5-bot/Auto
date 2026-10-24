@@ -133,7 +133,7 @@ async function api(req, res, url) {
 
 async function page(req, res, url, lang, rest) {
   const html = (s, code = 200, cache = 'public, max-age=300') => send(req, res, code, s, 'text/html; charset=utf-8', { 'cache-control': cache });
-  if (rest === '/' || rest === '') return html(V.home(req, lang, { wantedCount: wantedState.count }));
+  if (rest === '/' || rest === '') return html(V.home(req, lang, { wantedCount: wantedState.count, registryRecords: coverage().records }));
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
   if (rest === '/sources') return html(V.sourcesPage(req, lang));

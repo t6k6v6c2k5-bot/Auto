@@ -4,7 +4,7 @@ export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mi
   const factors = [];
   let score = 12;
   const add = (pts, key, vars = {}) => { score += pts; factors.push({ pts, key, vars }); };
-  const year = ua?.summary?.vehicle?.year || decoded?.year;
+  const year = ua?.summary?.vehicle?.year || (decoded?.trusted ? decoded.year : null);
   const age = year ? new Date().getFullYear() - year : 0;
 
   if (wanted.length) add(70, 'f_wanted');

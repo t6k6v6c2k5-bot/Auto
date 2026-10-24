@@ -25,7 +25,9 @@ export async function decodeVin(vin) {
       transmission: pick('TransmissionStyle'), country: pick('PlantCountry'), plant: [pick('PlantCity'), pick('PlantCountry')].filter(Boolean).join(', '),
       manufacturer: pick('Manufacturer'), errorCode: r.ErrorCode || '',
     };
-    out.found = Boolean(out.make && out.year);
+    // trusted: «чистый» разбор NHTSA (ErrorCode 0) — только он годится для выводов; у европейских VIN разбор частичный и год может быть неверным
+    out.trusted = /^0(,|$)/.test(String(out.errorCode)) && Boolean(out.make && out.model && out.year);
+    out.found = Boolean(out.make);
     return out;
   } catch {
     return { found: false, unavailable: true };
@@ -33,7 +35,7 @@ export async function decodeVin(vin) {
 }
 
 export async function recalls(d) {
-  if (!d?.found) return { items: [], unavailable: !!d?.unavailable };
+  if (!d?.trusted) return { items: [], unavailable: !!d?.unavailable };
   try {
     const q = new URLSearchParams({ make: d.make, model: d.model, modelYear: String(d.year) });
     const j = await getJson(`https://api.nhtsa.gov/recalls/recallsByVehicle?${q}`);
@@ -48,7 +50,7 @@ export async function recalls(d) {
 
 // Жалобы владельцев (NHTSA ODI): статистика по марке/модели/году.
 export async function complaints(d) {
-  if (!d?.found) return { count: 0, unavailable: !!d?.unavailable };
+  if (!d?.trusted) return { count: 0, unavailable: !!d?.unavailable };
   try {
     const q = new URLSearchParams({ make: d.make, model: d.model, modelYear: String(d.year) });
     const j = await getJson(`https://api.nhtsa.gov/complaints/complaintsByVehicle?${q}`, 10000);
@@ -67,7 +69,7 @@ export async function complaints(d) {
 
 // Краш-тесты NHTSA (5-star): берём первую комплектацию модели.
 export async function ratings(d) {
-  if (!d?.found) return null;
+  if (!d?.trusted) return null;
   try {
     const base = `https://api.nhtsa.gov/SafetyRatings/modelyear/${d.year}/make/${encodeURIComponent(d.make)}/model/${encodeURIComponent(d.model)}`;
     const list = (await getJson(base)).Results || [];
