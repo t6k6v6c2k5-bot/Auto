@@ -1,0 +1,9 @@
+{
+  "name": "vinscope",
+  "version": "1.0.0",
+  "description": "VINScope — платная проверка авто по VIN: США, Канада, Европа",
+  "type": "module",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test" },
+  "engines": { "node": ">=22.13" }
+}
