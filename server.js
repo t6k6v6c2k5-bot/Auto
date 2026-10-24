@@ -75,15 +75,15 @@ async function api(req, res, url) {
     let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return json(req, res, e.status || 400, { error: L('uk', 'err_bad') }); }
     const lang = LANGS.includes(b.lang) ? b.lang : 'uk';
     const plan = PLANS[b.plan]; const v = validateVin(b.vin);
-    if (!plan || !v.ok) return json(req, res, 400, { error: L(lang, 'err_vin') });
+    if (!plan || !v.ok) return json(req, res, 400, { error: L(lang, 'err_vin'), field: 'vin' });
     if (!paywallOn()) return json(req, res, 200, { url: `/${lang}/check?q=${v.vin}` }); // режим запуска: отчёт — это страница проверки
     const email = String(b.email || '').trim().slice(0, 200);
-    if (!EMAIL.test(email)) return json(req, res, 400, { error: L(lang, 'err_email') });
+    if (!EMAIL.test(email)) return json(req, res, 400, { error: L(lang, 'err_email'), field: 'email' });
 
     if (b.code) { // оплата кодом пакета
       if (limited('code:' + ipOf(req), 5)) return json(req, res, 429, { error: L(lang, 'err_rate') });
       const c = store.getCredit(b.code);
-      if (!c || c.remaining < 1 || !store.useCredit(c.code)) return json(req, res, 400, { error: L(lang, 'err_code') });
+      if (!c || c.remaining < 1 || !store.useCredit(c.code)) return json(req, res, 400, { error: L(lang, 'err_code'), field: 'code' });
       const o = store.newOrder({ vin: v.vin, plan: 'single', email, amount: 0, lang, status: 'credit', credit_code: c.code });
       await fulfil(o.id);
       return json(req, res, 200, { url: `/${lang}/report/${o.token}` });
@@ -104,7 +104,7 @@ async function api(req, res, url) {
     let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return json(req, res, e.status || 400, { error: L('uk', 'err_bad') }); }
     const lang = LANGS.includes(b.lang) ? b.lang : 'uk';
     const email = String(b.email || '').trim().slice(0, 200);
-    if (!EMAIL.test(email)) return json(req, res, 400, { error: L(lang, 'err_email') });
+    if (!EMAIL.test(email)) return json(req, res, 400, { error: L(lang, 'err_email'), field: 'email' });
     store.addWaitlist(email, lang, String(b.utm || '').slice(0, 200));
     return json(req, res, 200, { ok: true });
   }

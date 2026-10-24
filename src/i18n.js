@@ -384,3 +384,7 @@ D.ru.lp_plate.t = 'Проверка авто по госномеру: реест
 D.en.lp_plate.t = 'Vehicle check by Ukrainian plate number | VINScope';
 D.uk.home_desc = 'Безкоштовна перевірка авто в розшуку за VIN і держномером: розшук Нацполіції, реєстр МВС, відкликання та краш-тести NHTSA.';
 D.ru.home_desc = 'Бесплатная проверка авто в розыске по VIN и госномеру: розыск Нацполиции, реестр МВД, отзывные кампании и краш-тесты NHTSA.';
+
+Object.assign(D.uk, { report_ready: 'Звіт готовий', report_wait: 'Звіт ще формується. Оновіть сторінку трохи згодом.' });
+Object.assign(D.ru, { report_ready: 'Отчёт готов', report_wait: 'Отчёт ещё формируется. Обновите страницу чуть позже.' });
+Object.assign(D.en, { report_ready: 'The report is ready', report_wait: 'The report is still being prepared. Please refresh in a moment.' });

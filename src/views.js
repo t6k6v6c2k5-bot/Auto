@@ -70,7 +70,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 <div><p class="foot-h">VINScope</p><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
-<div class="loader" id="loader" hidden data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
+<div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
 <script src="/app.js?v=4" defer data-lang="${lang}"></script></body></html>`;
 }
 
@@ -189,7 +189,7 @@ export function messagePage(req, lang, title, text) {
 export function notFound(req, lang) {
   const d = dict(lang);
   const links = [['/', 'err_back'], ['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ['/pricing', 'nav_pricing']];
-  return layout(req, lang, { title: d.err_title, desc: d.err_title + ' — VINScope', path: '/', noindex: true, body: `<section class="sec"><div class="wrap narrow center"><h1>404</h1><p>${esc(d.err_title)}</p>${searchForm(lang, '', false, 'a')}<p style="margin-top:24px">${links.map(([h, k]) => `<a href="/${lang}${h}">${esc(d[k])}</a>`).join(' · ')}</p></div></section>` });
+  return layout(req, lang, { title: d.err_title, desc: d.err_title + ' — VINScope', path: '/', noindex: true, body: `<section class="sec"><div class="wrap narrow center"><h1>${esc(d.err_title)}</h1><p class="muted">404</p>${searchForm(lang, '', false, 'a')}<nav class="nf-links" aria-label="${esc(d.nav_label)}">${links.map(([h, k]) => `<a href="/${lang}${h}">${esc(d[k])}</a>`).join('')}</nav></div></section>` });
 }
 
 // ---------- блоки результата ----------
@@ -260,7 +260,7 @@ function decodeBlock(lang, r) {
   const d = dict(lang); const x = r.decoded;
   const rows = x.found ? (x.trusted ? [['dk_make', x.make], ['dk_model', x.model], ['dk_year', x.year], ['dk_trim', x.trim], ['dk_body', x.body], ['dk_drive', x.drive], ['dk_engine', x.engine], ['dk_fuel', x.fuel], ['dk_trans', x.transmission], ['dk_plant', x.plant]] : [['dk_make', x.make], ['dk_plant', x.plant]]).filter((q) => q[1]) : [];
   const mm = r.mismatch.length ? `<div class="notice bad">${ic.warn}<div><b>${esc(d.mm_h)}</b>${r.mismatch.map((m) => `<div>${esc(fmt(d['mm_' + m.field], { vin: m.vin, registry: m.registry }))}</div>`).join('')}</div></div>` : '';
-  const val = (k, v) => (['dk_body', 'dk_fuel', 'dk_drive', 'dk_trans'].includes(k) ? tv(lang, v) : esc(v));
+  const val = (k, v) => (['dk_body', 'dk_fuel', 'dk_drive', 'dk_trans'].includes(k) ? tv(lang, v) : k === 'dk_engine' ? esc(engineText(lang, v)) : ['dk_make', 'dk_model', 'dk_trim', 'dk_plant'].includes(k) ? en(lang, v) : esc(v));
   return `<section class="panel" aria-labelledby="h-dec"><h2 id="h-dec">${esc(d.decode_h)}</h2>${mm}${rows.length ? `${x.trusted ? '' : `<div class="notice info">${esc(d.decode_partial)}</div>`}<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(d[k])}</dt><dd>${val(k, v)}</dd>`).join('')}</dl>` : `<p class="muted">${esc(x.unavailable ? d.decode_unavail : d.decode_none)}</p>`}</section>`;
 }
 
@@ -389,7 +389,7 @@ export function reportPage(req, lang, order, r) {
   const title = r ? vehicleTitle(r, order.vin) : order.vin;
   let inner;
   if (['refunded', 'refund_failed'].includes(order.status)) inner = `<div class="panel center"><h2>${esc(d.refunded_h)}</h2><p>${esc(d.refunded_p)}</p></div>`;
-  else if (!r) inner = `<div class="panel center" data-poll="1" role="status"><h2>${esc(d.pending_h)}</h2><p>${esc(d.pending_p)}</p><a class="btn ghost" href="">${esc(d.refresh || 'Refresh')}</a></div>`;
+  else if (!r) inner = `<div class="panel center" data-poll="1" role="status" data-ready="${esc(d.report_ready)}" data-wait="${esc(d.report_wait)}"><h2>${esc(d.pending_h)}</h2><p>${esc(d.pending_p)}</p><a class="btn ghost" href="">${esc(d.refresh || 'Refresh')}</a></div>`;
   else inner = `${packNote(lang, order)}${actionsBlock(lang)}<p class="muted sm">${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)}</p>`;
   const hero = r ? vehicleHero(lang, r, d.rep_h) + tiles(lang, r) : `<section class="hero small"><div class="wrap"><p class="eyebrow">${esc(d.rep_h)}</p><h1>${esc(title)}</h1><p class="vinmono">${esc(order.vin)}</p></div></section>`;
   const body = `${hero}<section class="sec" style="padding-top:36px"><div class="wrap narrow">${inner}</div></section>`;

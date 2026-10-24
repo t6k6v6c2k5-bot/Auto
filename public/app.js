@@ -12,7 +12,8 @@
     if (!loader) return;
     const p = $('p', loader); if (on) p.textContent = loader.dataset.text; else p.textContent = '';
     loader.hidden = !on;
-    ['header.top', 'main', 'footer'].forEach((sel) => { const el = $(sel); if (el) { on ? el.setAttribute('inert', '') : el.removeAttribute('inert'); } });
+    if (on) loader.focus({ preventScroll: true });
+    ['header.top', 'main', 'footer', '.skip', '#sticky'].forEach((sel) => { const el = $(sel); if (el) { on ? el.setAttribute('inert', '') : el.removeAttribute('inert'); } });
     document.body.setAttribute('aria-busy', on ? 'true' : 'false');
   };
   window.addEventListener('pageshow', () => setBusy(false));
@@ -72,11 +73,12 @@
   $$('form.notify').forEach((f) => f.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const msgEl = $('.notify-msg', f.parentElement); const btn = $('button', f); btn.disabled = true;
+    const mail = f.email; mail.removeAttribute('aria-invalid');
     try {
       const r = await fetch('/api/notify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: f.email.value.trim(), lang: f.dataset.lang, utm: location.search.slice(0, 200) }) });
-      if (!r.ok) throw new Error((await r.json()).error || 'error');
+      if (!r.ok) { const j = await r.json(); const e = new Error(j.error || 'error'); e.field = j.field; throw e; }
       msgEl.className = 'good notify-msg'; msgEl.textContent = '✓ ' + f.dataset.ok; f.reset(); track('waitlist');
-    } catch (e) { msgEl.className = 'err notify-msg'; msgEl.textContent = e.message; }
+    } catch (e) { msgEl.className = 'err notify-msg'; msgEl.textContent = e.message; mail.setAttribute('aria-invalid', 'true'); mail.focus(); }
     btn.disabled = false;
   }));
 
@@ -87,12 +89,16 @@
     const err = $('#coerr'), btn = $('button[type=submit]', co);
     const body = { lang, plan: co.dataset.plan, vin: latin(co.vin.value), email: co.email.value.trim(), code: co.code ? co.code.value.trim() : '' };
     err.textContent = ''; btn.disabled = true; setBusy(true);
+    $$('input', co).forEach((i) => { i.removeAttribute('aria-invalid'); i.setAttribute('aria-describedby', 'coerr'); });
     try {
       const r = await fetch('/api/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'error');
+      if (!r.ok) { const e = new Error(j.error || 'error'); e.field = j.field; throw e; }
       location.href = j.url;
-    } catch (e) { err.textContent = e.message; co.email.setAttribute('aria-invalid', 'true'); btn.disabled = false; setBusy(false); }
+    } catch (e) {
+      err.textContent = e.message; btn.disabled = false; setBusy(false);
+      const bad = e.field && co.elements[e.field]; if (bad) { bad.setAttribute('aria-invalid', 'true'); bad.focus(); }
+    }
   });
 
   // ---------- Фото: при ошибке загрузки — силуэт ----------
@@ -116,10 +122,12 @@
   if (poll) {
     let n = 0;
     const tick = async () => {
-      if (++n > 10) return;
+      if (++n > 10) { poll.querySelector('p').textContent = poll.dataset.wait; return; }
       await new Promise((r) => setTimeout(r, Math.min(2000 * n, 8000)));
       const html = await safe(async () => (await fetch(location.href, { headers: { accept: 'text/html' } })).text());
-      if (html && !html.includes('data-poll')) { const doc = new DOMParser().parseFromString(html, 'text/html'); $('main').innerHTML = doc.querySelector('main').innerHTML; return; }
+      if (html && !html.includes('data-poll')) { const doc = new DOMParser().parseFromString(html, 'text/html'); $('main').innerHTML = doc.querySelector('main').innerHTML;
+        const h1 = $('h1'); if (h1) { h1.setAttribute('tabindex', '-1'); h1.focus(); }
+        const live = document.createElement('div'); live.className = 'sr-only'; live.setAttribute('role', 'status'); document.body.appendChild(live); setTimeout(() => { live.textContent = poll.dataset.ready; }, 50); return; }
       tick();
     };
     tick();
