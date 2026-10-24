@@ -7,6 +7,20 @@ const abs = (req, p) => origin(req) + p;
 const fmt = (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const LANG_NAMES = { uk: 'Українська', ru: 'Русский', en: 'English' };
 const en = (lang, txt) => (lang === 'en' ? esc(txt) : `<span lang="en">${esc(txt)}</span>`); // англоязычный фрагмент внутри uk/ru-страницы
+const cut = (str, n = 160) => { const x = String(str); if (x.length <= n) return x; const y = x.slice(0, n - 1); return y.slice(0, y.lastIndexOf(' ')).replace(/[,;:—-]+$/, '') + '…'; };
+const nice = (str) => String(str || '').toLowerCase().split(/(\s+|-)/).map((w) => (/^\s+$|^-$/.test(w) || !w ? w : /\d/.test(w) || (w.length <= 3 && /^[a-z]+$/.test(w)) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join('');
+const tel = (txt) => esc(txt).replace(/\b102\b/g, '<a href="tel:102">102</a>');
+// значения реестра МВС приходят украинскими заглавными: показываем на языке страницы
+const REG = {
+  ru: { 'БІЛИЙ': 'Белый', 'ЧОРНИЙ': 'Чёрный', 'СІРИЙ': 'Серый', 'СРІБЛЯСТИЙ': 'Серебристый', 'СИНІЙ': 'Синий', 'ЧЕРВОНИЙ': 'Красный', 'ЗЕЛЕНИЙ': 'Зелёный', 'ЖОВТИЙ': 'Жёлтый', 'КОРИЧНЕВИЙ': 'Коричневый', 'ЗОЛОТИСТИЙ': 'Золотистый', 'БЕЖЕВИЙ': 'Бежевый', 'ПОМАРАНЧЕВИЙ': 'Оранжевый', 'ФІОЛЕТОВИЙ': 'Фиолетовый', 'РОЖЕВИЙ': 'Розовый', 'ВИШНЕВИЙ': 'Вишнёвый', 'БОРДОВИЙ': 'Бордовый', 'ГОЛУБИЙ': 'Голубой', 'БІРЮЗОВИЙ': 'Бирюзовый', 'НЕВИЗНАЧЕНИЙ': 'Не определён',
+    'БЕНЗИН': 'Бензин', 'ДИЗЕЛЬНЕ ПАЛИВО': 'Дизель', 'ЕЛЕКТРО': 'Электро', 'ЕЛЕКТРО АБО БЕНЗИН': 'Гибрид (электро/бензин)', 'ЕЛЕКТРО АБО ДИЗЕЛЬНЕ ПАЛИВО': 'Гибрид (электро/дизель)', 'БЕНЗИН АБО ГАЗ': 'Бензин/газ', 'ГАЗ': 'Газ', 'ГАЗ АБО БЕНЗИН': 'Газ/бензин',
+    'СЕДАН': 'Седан', 'ХЕТЧБЕК': 'Хетчбэк', 'УНІВЕРСАЛ': 'Универсал', 'ПОЗАШЛЯХОВИК': 'Внедорожник', 'КУПЕ': 'Купе', 'КАБРІОЛЕТ': 'Кабриолет', 'МІНІВЕН': 'Минивэн', 'ПІКАП': 'Пикап', 'ЛІФТБЕК': 'Лифтбэк', 'ФУРГОН': 'Фургон' },
+  en: { 'БІЛИЙ': 'White', 'ЧОРНИЙ': 'Black', 'СІРИЙ': 'Grey', 'СРІБЛЯСТИЙ': 'Silver', 'СИНІЙ': 'Blue', 'ЧЕРВОНИЙ': 'Red', 'ЗЕЛЕНИЙ': 'Green', 'ЖОВТИЙ': 'Yellow', 'КОРИЧНЕВИЙ': 'Brown', 'ЗОЛОТИСТИЙ': 'Gold', 'БЕЖЕВИЙ': 'Beige', 'ПОМАРАНЧЕВИЙ': 'Orange', 'ФІОЛЕТОВИЙ': 'Purple', 'РОЖЕВИЙ': 'Pink', 'ВИШНЕВИЙ': 'Cherry', 'БОРДОВИЙ': 'Burgundy', 'ГОЛУБИЙ': 'Light blue', 'БІРЮЗОВИЙ': 'Turquoise', 'НЕВИЗНАЧЕНИЙ': 'Undetermined',
+    'БЕНЗИН': 'Petrol', 'ДИЗЕЛЬНЕ ПАЛИВО': 'Diesel', 'ЕЛЕКТРО': 'Electric', 'ЕЛЕКТРО АБО БЕНЗИН': 'Hybrid (electric/petrol)', 'ЕЛЕКТРО АБО ДИЗЕЛЬНЕ ПАЛИВО': 'Hybrid (electric/diesel)', 'БЕНЗИН АБО ГАЗ': 'Petrol/LPG', 'ГАЗ': 'LPG', 'ГАЗ АБО БЕНЗИН': 'LPG/petrol',
+    'СЕДАН': 'Sedan', 'ХЕТЧБЕК': 'Hatchback', 'УНІВЕРСАЛ': 'Estate', 'ПОЗАШЛЯХОВИК': 'SUV', 'КУПЕ': 'Coupe', 'КАБРІОЛЕТ': 'Convertible', 'МІНІВЕН': 'Minivan', 'ПІКАП': 'Pickup', 'ЛІФТБЕК': 'Liftback', 'ФУРГОН': 'Van' },
+};
+const rv = (lang, v) => { const k = String(v || '').trim().toUpperCase(); return REG[lang]?.[k] || (lang === 'uk' ? k.charAt(0) + k.slice(1).toLowerCase() : k.charAt(0) + k.slice(1).toLowerCase()); };
+const engineText = (lang, e) => String(e || '').replace(/(\d+(?:\.\d+)?)L\b/, lang === 'en' ? '$1 L' : '$1 л').replace(/ cyl\b/, lang === 'en' ? ' cyl' : ' цил.').replace(/ hp\b/, lang === 'en' ? ' hp' : ' к.с.');
 const dateOf = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 
 // ---------- иконки (декоративные: aria-hidden) ----------
@@ -41,7 +55,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css?v=4">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
-${cfg.plausible ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
+${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
 <header class="top"><div class="wrap bar">
@@ -61,20 +75,21 @@ ${sticky}
 }
 
 // ---------- поиск ----------
-export function searchForm(lang, value = '', big = true, id = 'a') {
+export function searchForm(lang, value = '', big = true, id = 'a', errKind = '') {
+  const errText = errKind ? ({ checksum: t(lang, 'vin_sum'), chars: t(lang, 'vin_chars') }[errKind] || t(lang, 'vin_len')) : '';
   const msg = JSON.stringify({ bad: t(lang, 'vin_len'), chars: t(lang, 'vin_chars'), checksum: t(lang, 'vin_sum'), ok: t(lang, 'vin_ok'), plate: t(lang, 'plate_ok') });
   return `<form class="vinform ${big ? 'big' : ''}" action="/${lang}/check" method="get" novalidate role="search">
 <label class="sr-only" for="q-${id}">${esc(t(lang, 'q_ph'))}</label>
-<div class="searchbox"><div class="field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ${A}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-<input name="q" id="q-${id}" value="${esc(value)}" placeholder="${esc(t(lang, 'q_ph'))}" maxlength="23" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-describedby="hint-${id}" data-msg='${esc(msg)}'>
+<div class="searchbox${errKind ? ' invalid' : ''}"><div class="field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ${A}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+<input name="q" id="q-${id}" value="${esc(value)}" placeholder="${esc(t(lang, 'q_ph'))}" maxlength="23" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-describedby="hint-${id}"${errKind ? ' aria-invalid="true"' : ''} data-msg='${esc(msg)}'>
 <span class="cnt" aria-hidden="true">0/17</span></div><button class="btn primary" type="submit">${esc(t(lang, 'btn_check'))}</button></div>
 <div class="modes" aria-hidden="true"><span data-mode="vin">${esc(t(lang, 'mode_vin'))}</span><span data-mode="plate">${esc(t(lang, 'mode_plate'))}</span></div>
-<p class="hint" id="hint-${id}" role="status" aria-live="polite"></p>
+<p class="hint${errKind ? ' err' : ''}" id="hint-${id}" role="status" aria-live="polite">${esc(errText)}</p>
 <div class="examples"><span>${esc(t(lang, 'ex_label'))}</span><button type="button" data-fill="1HGCM82633A004352">1HGCM82633A004352</button><button type="button" data-fill="AA1234BB">АА1234ВВ</button></div>
 <div class="recent"></div></form>`;
 }
 
-const orgLd = (req) => ({ '@context': 'https://schema.org', '@type': 'Organization', name: 'VINScope', url: abs(req, '/'), logo: abs(req, '/logo-512.png') });
+const orgLd = (req, lang = 'uk') => ({ '@context': 'https://schema.org', '@type': 'Organization', name: 'VINScope', url: abs(req, '/' + lang + '/'), logo: abs(req, '/logo-512.png') });
 const siteLd = (req, lang) => ({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'VINScope', alternateName: ['VIN Scope'], url: abs(req, '/' + lang + '/'), inLanguage: lang });
 const crumbLd = (req, lang, name, path) => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'VINScope', item: abs(req, '/' + lang + '/') }, { '@type': 'ListItem', position: 2, name, item: abs(req, '/' + lang + path) }] });
 const faqLd = (lang) => ({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: dict(lang).faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) });
@@ -91,7 +106,7 @@ export function planCards(lang, vin = '', soon = false) {
   return `<ul class="plans" role="list">${Object.entries(PLANS).map(([id, p]) => {
     const [name, desc] = d.plans[id];
     const per = p.count > 1 ? `<small>${price(Math.round(p.usd / p.count))} ${esc(d.per)}</small>` : '';
-    return `<li class="plan ${p.popular ? 'pop' : ''}">${p.popular ? `<span class="badge">${esc(d.popular)}</span>` : ''}
+    return `<li class="plan ${p.popular ? 'pop' : ''}">${p.popular && !soon ? `<span class="badge">${esc(d.popular)}</span>` : ''}
 <h3>${esc(name)}</h3><div class="amt">${price(p.usd)}</div>${per}<p>${esc(desc)}</p>
 <a class="btn ${p.popular ? 'primary' : 'ghost'}" href="${soon ? '#notify' : `/${lang}/checkout?plan=${id}${vin ? '&vin=' + encodeURIComponent(vin) : ''}`}">${esc(soon ? d.plan_notify : d.choose)}</a></li>`;
   }).join('')}</ul>`;
@@ -101,7 +116,7 @@ const sourcesList = (lang) => `<ul class="srclist">${dict(lang).srcs.map(([n, m,
 const h1Html = (txt) => esc(txt).replace(/\*(.+?)\*/g, '<span class="grad">$1</span>');
 
 // ---------- публичные страницы ----------
-export function home(req, lang, stats) {
+export function home(req, lang, stats, opts = {}) {
   const d = dict(lang);
   const nf = (n) => Number(n || 0).toLocaleString(lang === 'en' ? 'en-US' : lang === 'ru' ? 'ru-RU' : 'uk-UA');
   const chip = (cls, ico, a, b) => `<div class="chip ${cls}"><span class="dot ${ico[0]}" ${A}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ${A}>${ico[1]}</svg></span><div>${esc(a)}<small>${esc(b)}</small></div></div>`;
@@ -109,7 +124,7 @@ export function home(req, lang, stats) {
 <section class="hero"><div class="wrap hero-grid"><div>
 <span class="badge-pill"><i ${A}></i>${esc(d.hero_badge)}</span>
 <h1>${h1Html(d.h1)}</h1><p class="lead">${esc(d.sub)}</p>
-${searchForm(lang, '', true, 'a')}
+${searchForm(lang, opts.q || '', true, 'a', opts.err || '')}
 <div class="herostats">${stats.wantedCount ? `<div><b>${nf(stats.wantedCount)}</b><span>${esc(d.stat_wanted)}</span></div>` : ''}${stats.registryRecords ? `<div><b>${nf(stats.registryRecords)}</b><span>${esc(d.stat_reg)}</span></div>` : ''}${stats.wantedUpdatedAt ? `<div><b>${esc(dateOf(stats.wantedUpdatedAt))}</b><span>${esc(d.stat_upd)}</span></div>` : ''}</div>
 </div>
 <div class="visual" aria-hidden="true">${carSvg()}
@@ -123,7 +138,7 @@ ${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-
 <section class="sec alt"><div class="wrap narrow"><h2 class="reveal">${esc(d.src_h)}</h2><p class="sec-sub">${esc(d.src_p)}</p>${sourcesList(lang)}</div></section>
 <section class="sec"><div class="wrap narrow"><h2 class="reveal">${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
 <section class="sec cta"><div class="wrap narrow center"><h2 class="reveal">${esc(d.cta_h)}</h2>${searchForm(lang, '', false, 'b')}<div style="margin-top:48px;text-align:left">${waitlistBox(lang)}</div></div></section>`;
-  return layout(req, lang, { title: d.home_title, desc: d.home_desc, path: '/', body, jsonld: [orgLd(req), siteLd(req, lang), faqLd(lang)] });
+  return layout(req, lang, { title: d.home_title, desc: d.home_desc, path: '/', noindex: !!opts.q, body, jsonld: [orgLd(req, lang), siteLd(req, lang), faqLd(lang)] });
 }
 
 export function sourcesPage(req, lang) {
@@ -136,35 +151,35 @@ export function usaPage(req, lang) {
   const d = dict(lang);
   const body = `<section class="hero small"><div class="wrap"><h1>${esc(d.usa_page_h)}</h1><p class="lead">${esc(d.usa_p1)}</p>${searchForm(lang, '', true, 'a')}</div></section>
 <section class="sec"><div class="wrap narrow"><h2>${esc(d.usa_h2)}</h2><ul class="check">${d.usa_li.map((x) => `<li>${ic.check}<span>${esc(x)}</span></li>`).join('')}</ul>${waitlistBox(lang)}</div></section>`;
-  return layout(req, lang, { title: d.t_usa, desc: d.usa_p1.slice(0, 160), path: '/usa', body, jsonld: [orgLd(req), crumbLd(req, lang, d.nav_usa, '/usa')] });
+  return layout(req, lang, { title: d.t_usa, desc: cut(d.usa_p1), path: '/usa', body, jsonld: [orgLd(req, lang), crumbLd(req, lang, d.nav_usa, '/usa')] });
 }
 
 export function pricingPage(req, lang) {
   const d = dict(lang);
   const on = paywallOn();
-  const body = `<section class="hero small"><div class="wrap"><h1>${esc(d.price_h)}</h1><p class="lead">${esc(on ? d.price_sub : d.launch_p)}</p></div></section>
+  const body = `<section class="hero small"><div class="wrap"><h1>${esc(d.price_h)}</h1><p class="lead">${esc(on ? d.price_sub : d.pricing_lead)}</p></div></section>
 <section class="sec"><div class="wrap">${on ? '' : `<div class="panel launch"><h2>${esc(d.launch_h)}</h2><p>${esc(d.launch_p)}</p><a class="btn primary" href="/${lang}/">${esc(d.btn_check)}</a></div><h2 style="margin-top:40px">${esc(d.plans_soon_h)}</h2><p class="sec-sub">${esc(d.price_sub)}</p>`}${planCards(lang, '', !on)}${on ? '' : `<div class="narrow" style="margin-top:40px">${waitlistBox(lang)}</div>`}
 <div class="narrow" style="margin-top:48px"><h2>${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></div></section>`;
-  return layout(req, lang, { title: d.t_pricing, desc: on ? d.price_sub : d.launch_p, path: '/pricing', body, jsonld: [orgLd(req), crumbLd(req, lang, d.price_h, '/pricing'), faqLd(lang)] });
+  return layout(req, lang, { title: d.t_pricing, desc: on ? d.price_sub : d.launch_p, path: '/pricing', body, jsonld: [orgLd(req, lang), crumbLd(req, lang, d.price_h, '/pricing')] });
 }
 
 export function termsPage(req, lang) {
   const d = dict(lang);
   const contact = cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : '';
   const items = d.terms.map((x, i) => {
-    if (i === 3) return `<li>${esc(x)}${contact}</li>`;
+    if (i === 3) return `<li>${esc(x)}${contact ? ' ' + esc(d.terms_del) + contact : ''}</li>`;
     if (i === 4) return contact || cfg.operatorName ? `<li>${esc(x)}${esc(cfg.operatorName)} ${esc(cfg.operatorDetails)} ${contact}</li>` : '';
     return `<li>${esc(x)}</li>`;
   }).join('');
   const body = `<section class="sec"><div class="wrap narrow prose"><h1>${esc(d.terms_h)}</h1><ol>${items}</ol></div></section>`;
-  return layout(req, lang, { title: d.t_terms, desc: d.terms[0].slice(0, 160), path: '/terms', body, jsonld: [crumbLd(req, lang, d.terms_h, '/terms')] });
+  return layout(req, lang, { title: d.t_terms, desc: cut(d.terms[0]), path: '/terms', body, jsonld: [crumbLd(req, lang, d.terms_h, '/terms')] });
 }
 
 export function landingPage(req, lang, key) {
   const d = dict(lang); const lp = d['lp_' + key]; const path = '/' + key;
   const body = `<section class="hero small"><div class="wrap"><h1>${esc(lp.h1)}</h1><p class="lead">${esc(lp.lead)}</p>${searchForm(lang, '', true, 'a')}</div></section>
 <section class="sec"><div class="wrap narrow prose">${lp.s.map(([h, p]) => `<h2 class="left">${esc(h)}</h2><p>${esc(p)}</p>`).join('')}<p class="center" style="margin-top:32px"><a class="btn primary" href="/${lang}/">${esc(d.btn_check)}</a></p></div></section>`;
-  return layout(req, lang, { title: lp.t, desc: lp.lead, path, body, jsonld: [orgLd(req), crumbLd(req, lang, lp.h1, path)] });
+  return layout(req, lang, { title: lp.t, desc: cut(lp.lead), path, body, jsonld: [orgLd(req, lang), crumbLd(req, lang, lp.h1, path)] });
 }
 
 export function messagePage(req, lang, title, text) {
@@ -187,13 +202,13 @@ const riskTitle = (lang) => (lang === 'en' ? 'Risk Score' : `${en(lang, 'Risk Sc
 
 function riskBlock(lang, r) {
   const d = dict(lang);
-  return `<section class="panel" aria-labelledby="h-risk"><h2 id="h-risk">${riskTitle(lang)}</h2><div class="riskrow">${gauge(lang, r.risk.score, r.risk.level)}<div><span class="pill ${r.risk.level}">${esc(d['risk_' + r.risk.level])}</span><ul class="factors">${r.risk.factors.map((f) => `<li><b>+${f.pts}</b> ${esc(t(lang, f.key, f.vars))}</li>`).join('')}</ul></div></div><p class="muted sm">${esc(d.risk_note)} ${esc(d.risk_not_counted)}</p></section>`;
+  return `<section class="panel" aria-labelledby="h-risk"><h2 id="h-risk">${riskTitle(lang)}</h2><div class="riskrow">${gauge(lang, r.risk.score, r.risk.level)}<div><span class="pill ${r.risk.level}">${esc(d['risk_' + r.risk.level])}</span><ul class="factors">${r.risk.factors.map((f) => `<li><b>+${f.pts}</b> ${esc(t(lang, f.key, f.vars))}</li>`).join('')}</ul></div></div><p class="muted sm">${esc(d.risk_note)} ${esc(d.risk_not_counted)}${r.risk.limited ? ' ' + esc(d.risk_limited) : ''}</p></section>`;
 }
 
 function wantedBlock(lang, r) {
   const d = dict(lang);
   if (r.wanted.length) {
-    return `<section class="panel alert" aria-labelledby="h-wanted" role="alert"><h2 id="h-wanted">${ic.warn}${esc(d.wanted_hit)}</h2><p>${esc(d.wanted_hit_p)}</p>${r.wanted.slice(0, 3).map((w) => `<dl class="kv"><dt>${esc(d.w_vin)}</dt><dd>${esc(w.vin || w.chassis)}</dd><dt>${esc(d.w_plate)}</dt><dd>${w.plate ? plateEl(w.plate) : '—'}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(w.brand)} ${esc(w.model)}</dd><dt>${esc(d.w_color)}</dt><dd>${esc(w.color)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(w.seized))}</dd><dt>${esc(d.w_added)}</dt><dd>${esc(dateOf(w.added))}</dd><dt>${esc(d.w_unit)}</dt><dd>${esc(w.unit)}</dd></dl>`).join('')}</section>`;
+    return `<section class="panel alert" aria-labelledby="h-wanted" role="alert"><h2 id="h-wanted">${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${r.wanted.slice(0, 3).map((w) => `<dl class="kv"><dt>${esc(d.w_vin)}</dt><dd>${esc(w.vin || w.chassis)}</dd><dt>${esc(d.w_plate)}</dt><dd>${w.plate ? plateEl(w.plate) : '—'}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(w.brand)} ${esc(w.model)}</dd><dt>${esc(d.w_color)}</dt><dd>${esc(w.color)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(w.seized))}</dd><dt>${esc(d.w_added)}</dt><dd>${esc(dateOf(w.added))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(w.unit)}</dd></dl>`).join('')}</section>`;
   }
   const c = r.coverage;
   return `<section class="panel" aria-labelledby="h-wanted"><h2 id="h-wanted">${esc(d.wanted_h)}</h2>${c.wantedCount ? `<p class="good">${ic.check}<span>${esc(d.wanted_none)}</span></p><p class="muted sm">${esc(fmt(d.wanted_asof, { n: c.wantedCount.toLocaleString(lang === 'en' ? 'en-US' : 'uk-UA'), date: dateOf(c.wantedUpdatedAt) }))}</p>` : `<p class="muted">${esc(d.wanted_unavail)}</p>`}</section>`;
@@ -202,7 +217,7 @@ function wantedBlock(lang, r) {
 function conclusionBlock(lang, r) {
   const d = dict(lang);
   const items = r.next.flatMap((k) => (Array.isArray(d[k]) ? d[k] : [d[k]]));
-  return `<section class="panel" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ul class="check tight">${items.map((x) => `<li>${ic.check}<span>${esc(x)}</span></li>`).join('')}</ul></section>`;
+  return `<section class="panel" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ul class="check tight">${items.map((x) => `<li>${ic.check}<span>${tel(x)}</span></li>`).join('')}</ul></section>`;
 }
 
 function uaSummary(lang, ua) {
@@ -221,12 +236,12 @@ function uaBlock(lang, r, full) {
   if (full) {
     const isKey = (x) => ['import', 'first', 'owner', 'export', 'scrap', 'dereg'].includes(x.opkind);
     const keyRows = ua.rows.filter(isKey), other = ua.rows.filter((x) => !isKey(x));
-    const row = (x) => `<tr class="k-${x.opkind}"><td data-l="${esc(d.tl_date)}">${esc(x.date)}</td><td data-l="${esc(d.tl_op)}"><span class="kb">${esc(d['k_' + x.opkind] || x.opkind)}</span> ${esc(x.opname || x.oper)}</td><td data-l="${esc(d.tl_dep)}">${esc((x.dep || '').replace(/^\d+ - /, ''))}</td><td data-l="${esc(d.tl_plate)}">${x.plate ? plateEl(x.plate, true) : ''}</td></tr>`;
+    const row = (x) => `<tr class="k-${x.opkind}"><td data-l="${esc(d.tl_date)}">${esc(x.date)}</td><td data-l="${esc(d.tl_op)}"><span class="kb">${esc(d['k_' + x.opkind] || x.opkind)}</span> ${esc(x.opname || x.oper)}</td><td data-l="${esc(d.tl_dep)}" lang="uk">${esc((x.dep || '').replace(/^\d+ - /, ''))}</td><td data-l="${esc(d.tl_plate)}">${x.plate ? plateEl(x.plate, true) : ''}</td></tr>`;
     const head = `<thead><tr><th scope="col">${esc(d.tl_date)}</th><th scope="col">${esc(d.tl_op)}</th><th scope="col">${esc(d.tl_dep)}</th><th scope="col">${esc(d.tl_plate)}</th></tr></thead>`;
     tl = `<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.ua_h)}"><table class="tl"><caption class="sr-only">${esc(d.ua_h)}</caption>${head}<tbody>${keyRows.map(row).join('')}</tbody></table></div>${other.length ? `<details><summary>${esc(fmt(d.tl_others, { n: other.length }))}</summary><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.more_ops)}"><table class="tl"><caption class="sr-only">${esc(d.more_ops)}</caption>${head}<tbody>${other.map(row).join('')}</tbody></table></div></details>` : ''}`;
   }
   const v = ua.summary.vehicle;
-  const line = [v.brand, v.model, v.year, v.color, v.fuel, v.cap ? v.cap + ' cm³' : ''].filter(Boolean).join(' · ');
+  const line = [nice(v.brand), nice(v.model), v.year, v.color && rv(lang, v.color), v.fuel && rv(lang, v.fuel), v.cap ? `${v.cap} ${d.cm3}` : ''].filter(Boolean).join(' · ');
   return `<section class="panel" aria-labelledby="h-ua"><h2 id="h-ua">${esc(d.ua_h)}</h2>${line ? `<p class="vehline">${esc(line)}</p>` : ''}${uaSummary(lang, ua)}${tl}<p class="muted sm">${esc(covTxt)}${cov.indexing ? ' · ' + esc(d.ua_indexing) : ''}</p></section>`;
 }
 
@@ -255,7 +270,7 @@ function safetyBlock(lang, r, full) {
   const item = (x, long) => `<li><b>${en(lang, x.component)}</b><span lang="en">${esc((x.summary || '').slice(0, long ? 420 : 220))}…</span></li>`;
   const head = rec.items.slice(0, full ? 3 : 3), tail = full ? rec.items.slice(3) : [];
   const recHtml = rec.items.length
-    ? `<p><b>${esc(d.open_recalls)}${rec.items.length}</b></p><ul class="recalls">${head.map((x) => item(x, full)).join('')}</ul>${tail.length ? `<details><summary>${esc(fmt(d.recalls_more, { n: rec.items.length }))}</summary><ul class="recalls">${tail.map((x) => item(x, true)).join('')}</ul></details>` : ''}<p class="muted sm">${esc(d.recalls_check)}</p>`
+    ? `<p><b>${esc(d.open_recalls)}${rec.items.length}</b></p><ul class="recalls">${head.map((x) => item(x, full)).join('')}</ul>${tail.length ? `<details><summary>${esc(fmt(d.recalls_more, { n: rec.items.length }))}</summary><ul class="recalls">${tail.map((x) => item(x, true)).join('')}</ul></details>` : ''}<p class="muted sm">${esc(d.nhtsa_en)} ${esc(d.recalls_check)}</p>`
     : r.decoded.trusted ? `<p class="good">${ic.check}<span>${esc(d.none_recalls)}</span></p>` : `<p class="muted">${esc(d.sr_dev)}</p>`;
   const compHtml = c.count ? `<p><b>${esc(fmt(d.comp_n, { n: c.count }))}</b></p><p class="muted sm">${esc(fmt(d.comp_stats, { c: c.crashes, f: c.fires, i: c.injuries, d: c.deaths }))}</p><p class="sm">${esc(d.comp_top)}: ${c.top.map((x) => `${en(lang, x.component)} (${x.n})`).join(', ')}</p><p class="muted sm">${esc(d.comp_note)}</p>` : `<p class="muted">${r.decoded.trusted ? esc(d.none_comp) : esc(d.sr_dev)}</p>`;
   let rateHtml = '';
@@ -275,24 +290,27 @@ function usaBlock(lang, r) {
 // ---------- шапка результата ----------
 const vehicleTitle = (r, fallback) => {
   const x = r.decoded; const v = r.ua?.summary?.vehicle;
-  if (x?.trusted) return `${x.year} ${x.make} ${x.model}`;
-  if (v?.brand) return [v.brand, v.model, v.year].filter(Boolean).join(' ');
-  return x?.make || fallback;
+  if (x?.trusted) return `${nice(x.make)} ${nice(x.model)}, ${x.year}`;
+  if (v?.brand) return `${[nice(v.brand), nice(v.model)].filter(Boolean).join(' ')}${v.year ? ', ' + v.year : ''}`;
+  return x?.make ? nice(x.make) : fallback;
 };
 function photoFigure(lang, r) {
   const d = dict(lang); const ph = r.photo;
   if (!ph && !r.vehicle?.make) return ''; // марка неизвестна: показывать нечего
   return `<figure class="photo${ph ? '' : ' nophoto'}"><div class="ph">${ph ? `<img src="${esc(ph.url)}" alt="${esc(vehicleTitle(r, ''))}" width="960" height="600" decoding="async" fetchpriority="high">` : ''}<div class="fallback">${silhouette}</div></div>${ph ? `<figcaption>${esc(d.photo_cap)} · <a href="${esc(ph.page)}" target="_blank" rel="noopener noreferrer">${esc(d.photo_src)}<span class="sr-only"> ${esc(d.ext_new_tab)}</span></a></figcaption>` : ''}</figure>`;
 }
-function specChips(r) {
-  const x = r.decoded; const v = r.ua?.summary?.vehicle || {};
-  const items = (x?.trusted ? [x.year, x.body, x.fuel, x.engine] : [v.year, v.body, v.fuel, v.cap ? v.cap + ' cm³' : '', v.color]).filter(Boolean);
-  return items.length ? `<ul class="specs" role="list">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
+function specChips(lang, r) {
+  const x = r.decoded; const v = r.ua?.summary?.vehicle || {}; const d = dict(lang);
+  const items = x?.trusted
+    ? [x.body && tv(lang, x.body), x.fuel && tv(lang, x.fuel), x.engine && esc(engineText(lang, x.engine))]
+    : [v.body && esc(rv(lang, v.body)), v.fuel && esc(rv(lang, v.fuel)), v.cap && `${v.cap} ${esc(d.cm3)}`, v.color && esc(rv(lang, v.color))];
+  const list = items.filter(Boolean);
+  return list.length ? `<ul class="specs" role="list">${list.map((i) => `<li>${i}</li>`).join('')}</ul>` : '';
 }
 function vehicleHero(lang, r, eyebrow, fromPlate) {
   const d = dict(lang); const title = vehicleTitle(r, r.vin);
   return `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
-<div class="vehicle${photoFigure(lang, r) ? '' : ' solo'}">${photoFigure(lang, r)}<div><p class="eyebrow">${esc(eyebrow)}</p><h1 class="${title === r.vin ? 'vin' : ''}">${esc(title)}</h1>${title !== r.vin ? `<p class="vinmono">${esc(r.vin)}</p>` : ''}${fromPlate ? `<p class="byplate">${esc(fmt(d.found_by_plate, { plate: '' }))}${plateEl(fromPlate, true)}</p>` : ''}${specChips(r)}</div></div></div></section>`;
+<div class="vehicle${photoFigure(lang, r) ? '' : ' solo'}">${photoFigure(lang, r)}<div><p class="eyebrow">${esc(eyebrow)}</p><h1 class="${title === r.vin ? 'vin' : ''}">${esc(title)}</h1>${title !== r.vin ? `<p class="vinmono">${esc(r.vin)}</p>` : ''}${fromPlate ? `<p class="byplate">${esc(fmt(d.found_by_plate, { plate: '' }))}${plateEl(fromPlate, true)}</p>` : ''}${specChips(lang, r)}</div></div></div></section>`;
 }
 const miniGauge = (score, level) => {
   const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : 'var(--good)'; const C = 2 * Math.PI * 20;
@@ -308,7 +326,7 @@ function tiles(lang, r) {
   const d = dict(lang); const c = r.coverage; const cov = c.registry;
   const t1 = r.wanted.length ? ['bad', tileIc.bad, d.t_wanted_hit] : c.wantedCount > 0 ? ['ok', tileIc.ok, d.t_wanted_ok] : ['na', tileIc.na, d.t_na];
   const n = r.ua.rows.length;
-  const t2 = n ? ['ok', tileIc.doc, plural(lang, n, d.t_reg_n)] : cov.ready ? ['warn', tileIc.doc, d.t_reg_none] : ['na', tileIc.na, d.t_reg_unk];
+  const t2 = n ? ['ok', tileIc.doc, plural(lang, n, d.t_reg_n)] : cov.ready ? ['na', tileIc.doc, d.t_reg_none] : ['na', tileIc.na, d.t_reg_unk];
   const regLabel = cov.ready ? fmt(d.tile_reg_years, { from: String(cov.from).slice(0, 4), to: String(cov.to).slice(0, 4) }) : d.t_reg;
   const rc = r.recalls.items.length;
   const t3 = !r.decoded.trusted ? ['na', tileIc.na, d.t_na] : rc ? ['warn', tileIc.bad, plural(lang, rc, d.t_recalls_n)] : ['ok', tileIc.ok, d.t_recalls_none];
@@ -316,7 +334,7 @@ function tiles(lang, r) {
   return `<div class="wrap"><ul class="tiles" role="list">${tile(t1, d.wanted_h)}${tile(t2, regLabel)}${tile(t3, d.t_recalls)}<li class="tile risk"><span class="ic">${miniGauge(r.risk.score, r.risk.level)}</span><div><small>${esc(d.t_risk)}</small><b>${r.risk.score} · ${esc(d['risk_' + r.risk.level])}</b></div></li></ul></div>`;
 }
 
-const actionsBlock = (lang) => `<div class="panel actions-panel noprint"><h2>${esc(t(lang, 'print_h'))}</h2><div class="actions"><button class="btn ghost" type="button" data-print>${esc(t(lang, 'print'))}</button><button class="btn ghost" type="button" id="share" data-ok="${esc(t(lang, 'copied_ok'))}">${esc(t(lang, 'share'))}</button></div></div>`;
+const actionsBlock = (lang) => `<div class="panel actions-panel noprint"><h2>${esc(t(lang, 'print_h'))}</h2><div class="actions"><button class="btn ghost" type="button" data-print>${esc(t(lang, 'print'))}</button><button class="btn ghost" type="button" id="share" data-ok="${esc(t(lang, 'copied_ok'))}">${esc(t(lang, 'share'))}</button></div><p class="muted sm" style="margin:12px 0 0">${esc(t(lang, 'share_note'))}</p></div>`;
 
 export function checkPage(req, lang, r, { full = false, fromPlate = '' } = {}) {
   const d = dict(lang);
@@ -325,7 +343,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '' } = {}) {
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const main = full
-    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(d.asof)} ${esc(r.generatedAt.slice(0, 16).replace('T', ' '))} UTC.</p>`
+    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const aside = full
     ? `${actionsBlock(lang)}${waitlistBox(lang)}`
@@ -337,7 +355,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '' } = {}) {
 
 export function plateNotFound(req, lang, plate, cov, wanted) {
   const d = dict(lang);
-  const w = wanted.length ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${esc(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd>${esc(q.unit)}</dd></dl>`).join('')}</section>` : '';
+  const w = wanted.length ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(q.unit)}</dd></dl>`).join('')}</section>` : '';
   const body = `<section class="hero small"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a><p class="eyebrow">${esc(d.res_h)}</p><h1>${plateEl(plate)}</h1></div></section><section class="sec"><div class="wrap narrow">${w}
 <div class="panel"><h2>${esc(d.not_found_plate)}</h2><p>${esc(fmt(d.not_found_plate_p, { from: cov.from || '—', to: cov.to || '—' }))}</p></div>${searchForm(lang, '', false, 'a')}</div></section>`;
   return layout(req, lang, { title: `${plate} — ${d.res_h} | VINScope`, desc: d.not_found_plate, path: '/check', body, noindex: true });
@@ -372,7 +390,7 @@ export function reportPage(req, lang, order, r) {
   let inner;
   if (['refunded', 'refund_failed'].includes(order.status)) inner = `<div class="panel center"><h2>${esc(d.refunded_h)}</h2><p>${esc(d.refunded_p)}</p></div>`;
   else if (!r) inner = `<div class="panel center" data-poll="1" role="status"><h2>${esc(d.pending_h)}</h2><p>${esc(d.pending_p)}</p><a class="btn ghost" href="">${esc(d.refresh || 'Refresh')}</a></div>`;
-  else inner = `${packNote(lang, order)}${actionsBlock(lang)}<p class="muted sm">${esc(d.asof)} ${esc(r.generatedAt.slice(0, 16).replace('T', ' '))} UTC</p>${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)}</p>`;
+  else inner = `${packNote(lang, order)}${actionsBlock(lang)}<p class="muted sm">${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)}</p>`;
   const hero = r ? vehicleHero(lang, r, d.rep_h) + tiles(lang, r) : `<section class="hero small"><div class="wrap"><p class="eyebrow">${esc(d.rep_h)}</p><h1>${esc(title)}</h1><p class="vinmono">${esc(order.vin)}</p></div></section>`;
   const body = `${hero}<section class="sec" style="padding-top:36px"><div class="wrap narrow">${inner}</div></section>`;
   return layout(req, lang, { title: `${title} — ${d.rep_h} | VINScope`, desc: d.rep_h, path: '/report/' + order.token, body, noindex: true });

@@ -58,7 +58,18 @@ async function doFulfil(orderId) {
 }
 
 // ---------- API ----------
+// POST только как application/json с того же origin (защита от CSRF-спама простыми формами)
+function postGuard(req, res) {
+  const ct = String(req.headers['content-type'] || '');
+  const origin = req.headers.origin;
+  let sameOrigin = true;
+  if (origin) { try { sameOrigin = new URL(origin).host === req.headers.host; } catch { sameOrigin = false; } }
+  if (!/^application\/json/i.test(ct) || !sameOrigin) { json(req, res, ct ? 403 : 415, { error: L('uk', 'err_bad') }); return false; }
+  return true;
+}
+
 async function api(req, res, url) {
+  if (req.method === 'POST' && (url.pathname === '/api/checkout' || url.pathname === '/api/notify') && !postGuard(req, res)) return;
   if (req.method === 'POST' && url.pathname === '/api/checkout') {
     if (limited('co:' + ipOf(req), 15)) return json(req, res, 429, { error: L('uk', 'err_rate') });
     let b; try { b = JSON.parse(await readBody(req)); } catch (e) { return json(req, res, e.status || 400, { error: L('uk', 'err_bad') }); }
@@ -82,7 +93,7 @@ async function api(req, res, url) {
       const d = dict(lang).plans[b.plan];
       const s = await stripe.createCheckout({
         order: o, name: `VINScope — ${d[0]}`, description: `VIN ${v.vin}`,
-        successUrl: `${origin(req)}/${lang}/success?o=${o.id}`, cancelUrl: `${origin(req)}/${lang}/checkout?plan=${b.plan}&vin=${v.vin}`,
+        successUrl: `${origin(req)}/${lang}/success?o=${o.id}&s=${o.secret}`, cancelUrl: `${origin(req)}/${lang}/checkout?plan=${b.plan}&vin=${v.vin}`,
       });
       store.updateOrder(o.id, { stripe_session: s.id });
       return json(req, res, 200, { url: s.url });
@@ -102,20 +113,26 @@ async function api(req, res, url) {
     return json(req, res, 200, { wanted: { loaded: wantedState.loaded, count: wantedState.count, updatedAt: wantedState.updatedAt }, registry: { from: c.from, to: c.to, records: c.records, indexing: c.indexing, ready: c.ready }, paywall: paywallOn() });
   }
   if (req.method === 'GET' && url.pathname.startsWith('/api/vin/')) {
-    if (limited('vin:' + ipOf(req), 20)) return json(req, res, 429, { error: L('uk', 'err_rate') });
+    const lg = LANGS.includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'uk';
+    if (limited('vin:' + ipOf(req), 20)) return json(req, res, 429, { error: L(lg, 'err_rate') });
     const v = validateVin(url.pathname.slice(9));
-    if (!v.ok) return json(req, res, 400, { error: v.error });
+    if (!v.ok) return json(req, res, 400, { error: L(lg, 'err_vin'), reason: v.error });
     const r = await buildReport(v.vin);
     return json(req, res, 200, { vin: v.vin, region: v.region, decoded: r.decoded, risk: r.risk, wanted: r.wanted.length, registryRecords: r.ua.rows.length });
   }
-  return json(req, res, 404, { error: 'Not found' });
+  return json(req, res, 404, { error: L('uk', 'err_bad') });
 }
 
 // ---------- страницы ----------
 async function page(req, res, url, lang, rest) {
   const html = (s, code = 200, cache = 'public, max-age=300', extra = {}) => send(req, res, code, s, 'text/html; charset=utf-8', { 'cache-control': cache, ...extra });
   const priv = (s, code = 200) => html(s, code, 'private, no-store', { ...NOINDEX, 'referrer-policy': 'no-referrer' });
-  if (rest === '/') return html(V.home(req, lang, { wantedCount: wantedState.count, wantedUpdatedAt: wantedState.updatedAt, registryRecords: coverage().records }));
+  if (rest === '/') {
+    const stats = { wantedCount: wantedState.count, wantedUpdatedAt: wantedState.updatedAt, registryRecords: coverage().records };
+    const q = (url.searchParams.get('q') || '').slice(0, 40);
+    if (q) return html(V.home(req, lang, stats, { q, err: url.searchParams.get('e') || 'bad' }), 200, 'private, no-store', NOINDEX);
+    return html(V.home(req, lang, stats));
+  }
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
   if (rest === '/sources') return html(V.sourcesPage(req, lang));
@@ -133,7 +150,7 @@ async function page(req, res, url, lang, rest) {
       return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: url.searchParams.get('p') || '' }));
     }
     const plate = normalizePlate(raw);
-    if (!looksLikePlate(plate)) return redirect(res, `/${lang}/`);
+    if (!looksLikePlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);
     store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
@@ -147,7 +164,8 @@ async function page(req, res, url, lang, rest) {
   }
   if (rest === '/success') {
     const o = store.getOrder(url.searchParams.get('o') || '');
-    if (!o) return redirect(res, `/${lang}/`);
+    const sec = url.searchParams.get('s') || '';
+    if (!o || !o.success_secret || sec.length !== o.success_secret.length || !timingSafeEqual(Buffer.from(sec), Buffer.from(o.success_secret))) return redirect(res, `/${lang}/`);
     try {
       if (o.stripe_session && !o.report && o.status === 'pending') {
         const s = await stripe.getSession(o.stripe_session);
@@ -179,7 +197,7 @@ function sitemap(req) {
 
 // Админка: HTTP Basic (пароль = ADMIN_KEY), сравнение по хешам, лимит попыток
 function admin(req, res) {
-  const deny = () => { res.writeHead(401, { 'www-authenticate': 'Basic realm="VINScope admin", charset="UTF-8"', 'cache-control': 'no-store' }); res.end(); };
+  const deny = () => send(req, res, 401, 'Unauthorized', 'text/plain; charset=utf-8', { 'www-authenticate': 'Basic realm="VINScope admin", charset="UTF-8"', 'cache-control': 'no-store' });
   if (!cfg.adminKey || cfg.adminKey.length < 16) return send(req, res, 404, 'Not found', 'text/plain');
   if (limited('adm:' + ipOf(req), 10)) return send(req, res, 429, 'Too many attempts', 'text/plain');
   const m = /^Basic (.+)$/.exec(req.headers.authorization || '');
@@ -226,6 +244,8 @@ const server = createServer(async (req, res) => {
       return await page(req, res, url, m[1], clean);
     }
     if (await serveStatic(req, res, PUB, pathname)) return;
+    if (pathname === '/favicon.ico') return redirect(res, '/favicon.svg', 301, { 'cache-control': 'public, max-age=86400' });
+    if (/\.[a-z0-9]{2,5}$/i.test(pathname)) return send(req, res, 404, 'Not found', 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=300' }); // не отдаём HTML-страницу на каждый промах статики
     send(req, res, 404, V.notFound(req, pickLang(req)), 'text/html; charset=utf-8', NOINDEX);
   } catch (e) {
     if (e.status === 413) return send(req, res, 413, 'Payload too large', 'text/plain');

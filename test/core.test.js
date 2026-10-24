@@ -61,6 +61,8 @@ test('Risk Score: розыск даёт максимальный риск, чи�
   assert.equal(clean.level, 'low');
   const wanted = riskScore({ decoded: { found: true, year: 2020 }, recalls: [], wanted: [{}], ua: { rows: [] }, region: 'EU', complaints: {}, mismatch: [] });
   assert.ok(wanted.score >= 92 && wanted.level === 'high');
+  assert.equal(clean.factors.reduce((a, f) => a + f.pts, 0), clean.score, 'сумма весов равна баллу');
+  assert.equal(wanted.factors.reduce((a, f) => a + f.pts, 0), wanted.score);
   const swap = riskScore({ decoded: { found: true, year: 2020 }, recalls: [], wanted: [], ua: null, region: 'EU', complaints: {}, mismatch: [{ field: 'year' }] });
   assert.ok(swap.score > clean.score);
 });

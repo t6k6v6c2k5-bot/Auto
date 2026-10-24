@@ -15,6 +15,18 @@ const PKG_CUR = '348dbb24-a545-4d8c-95d5-18d35c593ca1';   // «Інформац�
 const say = (m) => parentPort.postMessage(m);
 
 
+const HOST_OK = (u) => { try { const x = new URL(u); return x.protocol === 'https:' && /(^|\.)data\.gov\.ua$/.test(x.hostname); } catch { return false; } };
+// fetch с проверкой хоста на каждом редиректе и таймаутом заголовков; зависшее тело обрывается по idle-таймеру
+async function safeFetch(url, ac) {
+  for (let hop = 0; hop < 5; hop++) {
+    if (!HOST_OK(url)) throw new Error('blocked host: ' + new URL(url).hostname);
+    const res = await fetch(url, { headers: UA, redirect: 'manual', signal: ac.signal });
+    if (res.status >= 300 && res.status < 400 && res.headers.get('location')) { url = new URL(res.headers.get('location'), url).href; continue; }
+    return res;
+  }
+  throw new Error('too many redirects');
+}
+
 async function ckan(id) {
   for (let a = 0; a < 3; a++) {
     try {
@@ -36,6 +48,8 @@ const parseDate = (s) => {
 async function main() {
   const db = new DatabaseSync(dbPath);
   db.exec(SCHEMA);
+  // хвосты оборванных загрузок (процесс убили посреди импорта): удаляем недогруженные источники и их строки
+  db.exec('DELETE FROM reg WHERE src IN (SELECT id FROM sources WHERE done=0); DELETE FROM sources WHERE done=0;');
   const dict = new Map(db.prepare('SELECT v,id FROM dict').all().map((r) => [r.v, r.id]));
   const insDict = db.prepare('INSERT OR IGNORE INTO dict(v) VALUES(?)');
   const getDict = db.prepare('SELECT id FROM dict WHERE v=?');
@@ -65,14 +79,18 @@ async function main() {
     const row = db.prepare('SELECT * FROM sources WHERE key=?').get(s.key);
     if (row?.done && row.modified === s.modified) continue;
     if (statSync(dbPath).size > maxBytes) { say({ type: 'log', msg: 'size limit reached, stopping' }); break; }
-    let id;
-    if (row) { id = row.id; db.exec('BEGIN'); db.prepare('DELETE FROM reg WHERE src=?').run(id); db.prepare('UPDATE sources SET done=0,modified=? WHERE id=?').run(s.modified, id); db.exec('COMMIT'); }
-    else id = Number(db.prepare('INSERT INTO sources(key,name,modified) VALUES(?,?,?)').run(s.key, s.name, s.modified).lastInsertRowid);
+    // новые строки пишем под временным источником и подменяем старые одной транзакцией после успеха:
+    // сбой посреди загрузки не стирает прежнюю историю
+    const id = Number(db.prepare('INSERT INTO sources(key,name,modified) VALUES(?,?,?)').run(s.key + '#stage' + Date.now(), s.name, s.modified).lastInsertRowid);
     say({ type: 'start', name: s.name });
+    let ac, idle, idleTimer;
     try {
-      const res = await fetch(s.url, { headers: UA, redirect: 'follow' });
+      ac = new AbortController();
+      const hdrTimer = setTimeout(() => ac.abort(), 60000);
+      const res = await safeFetch(s.url, ac);
+      clearTimeout(hdrTimer);
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      if (!/(^|\.)data\.gov\.ua$/.test(new URL(res.url).hostname)) throw new Error('unexpected host ' + new URL(res.url).hostname);
+      idle = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => ac.abort(), 120000); }; idle();
       const stream = s.kind === 'zip' ? unzipFirstEntry(res.body) : (await import('node:stream')).Readable.fromWeb(res.body);
       const dec = new TextDecoder('utf-8'); let tail = '', header = null, delim = ';', idx = {}, n = 0, dmin = 99999999, dmax = 0;
       db.exec('BEGIN');
@@ -106,7 +124,7 @@ async function main() {
       };
       let bytes = 0;
       for await (const chunk of stream) {
-        bytes += chunk.length;
+        bytes += chunk.length; idle();
         if (bytes > 2.5e9) throw new Error('source too large');           // защита от распаковки-бомбы
         const text = tail + dec.decode(chunk, { stream: true });
         const lines = text.split('\n'); tail = lines.pop();
@@ -115,10 +133,16 @@ async function main() {
       }
       if (tail) handle(tail.replace(/\r$/, ''));
       db.exec('COMMIT');
-      db.prepare('UPDATE sources SET done=1, rows=?, dmin=?, dmax=?, updated_at=? WHERE id=?').run(n, dmin, dmax, new Date().toISOString(), id);
+      clearTimeout(idleTimer);
+      db.exec('BEGIN');
+      if (row) { db.prepare('DELETE FROM reg WHERE src=?').run(row.id); db.prepare('DELETE FROM sources WHERE id=?').run(row.id); }
+      db.prepare('UPDATE sources SET key=?, done=1, rows=?, dmin=?, dmax=?, updated_at=? WHERE id=?').run(s.key, n, dmin, dmax, new Date().toISOString(), id);
+      db.exec('COMMIT');
       say({ type: 'done', name: s.name, rows: n });
     } catch (e) {
+      clearTimeout(idleTimer);
       try { db.exec('ROLLBACK'); } catch { /* not in tx */ }
+      try { db.prepare('DELETE FROM reg WHERE src=?').run(id); db.prepare('DELETE FROM sources WHERE id=?').run(id); } catch { /* чистка временных строк */ }
       say({ type: 'error', name: s.name, msg: e.message });
     }
   }

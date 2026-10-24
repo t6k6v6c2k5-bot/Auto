@@ -21,8 +21,10 @@ async function resolveUrl() {
 export async function refreshWanted() {
   try {
     const { url, modified } = await resolveUrl();
+    if (!/^https:\/\/([a-z0-9-]+\.)*data\.gov\.ua\//.test(url)) throw new Error('unexpected dataset host');
     const r = await fetch(url, { headers: UA, redirect: 'follow', signal: AbortSignal.timeout(120000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!/(^|\.)data\.gov\.ua$/.test(new URL(r.url).hostname)) throw new Error('unexpected host after redirect');
     if (Number(r.headers.get('content-length')) > 200e6) throw new Error('dataset too large');
     const rows = await r.json();
     const v = new Map(), p = new Map();
@@ -35,6 +37,8 @@ export async function refreshWanted() {
       push(v, normalizeVin(x.bodynumber), rec); push(v, normalizeVin(x.chassisnumber), rec);
       if (x.vehiclenumber) push(p, normalizePlate(x.vehiclenumber), rec);
     }
+    // защита от «пустой» выгрузки: если записей стало втрое меньше, оставляем прежний индекс
+    if (!Array.isArray(rows) || rows.length < 1000 || (state.count && rows.length < state.count * 0.5)) throw new Error(`suspicious dataset size ${rows?.length} (was ${state.count})`);
     byVin = v; byPlate = p;
     Object.assign(state, { loaded: true, count: rows.length, updatedAt: new Date().toISOString(), sourceModified: modified, error: null });
     console.log(`wanted: ${rows.length} records indexed`);

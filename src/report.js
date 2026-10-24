@@ -44,7 +44,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   const mismatch = consistency(decoded, ua);
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch });
   const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : { make: decoded.make };
-  const photo = veh.make ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 3000, null), veh.year) : null;
+  const photo = veh.make ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 1200, null), veh.year) : null;
   let usa = null;
   if (withProvider) { try { usa = await fetchProvider(vin, plan, decoded); } catch (e) { console.error('provider failed', e.message); } }
   const found = Boolean(decoded.trusted || decoded.found || ua.rows.length || wanted.length || usa?.found);

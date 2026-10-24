@@ -334,3 +334,53 @@ Object.assign(D.uk, { lp_wanted_link: 'Перевірка на розшук', lp
 Object.assign(D.ru, { lp_wanted_link: 'Проверка на розыск', lp_plate_link: 'Проверка по госномеру' });
 Object.assign(D.en, { lp_wanted_link: 'Wanted-list check', lp_plate_link: 'Check by plate' });
 delete D.en.lp_more;
+
+// ---------- Второй круг ревью ----------
+Object.assign(D.uk, {
+  f_base: 'Базовий рівень', t_risk: 'Risk Score',
+  risk_limited: 'Для авто не з США відкликання, скарги й краш-тести NHTSA недоступні, тому оцінка спирається на менше даних.',
+  nhtsa_en: 'Описи від NHTSA наведено англійською.', asof_full: 'Дані станом на {t} UTC.', share_note: 'Посилання містить VIN і відкривається в будь-кого, хто його має.',
+  terms_del: 'Щоб видалити свої дані, напишіть нам: ',
+  sub: 'Розшук Нацполіції, історія реєстрацій в Україні, відкличні кампанії та краш-тести NHTSA (для моделей США) — за відкритими державними даними.',
+  usa_p1: 'Авто з американських аукціонів нерідко бувають після ДТП, повені чи граду, і про це не завжди повідомляють. Ми показуємо те, що можна перевірити вже зараз у відкритих базах: розшук, реєстрації в Україні, відкликання, скарги та краш-тести.',
+  c_nocover: 'У реєстрі записів немає, а авто з-за кордону: додатково з\'ясуйте історію ввезення та дані митного оформлення.',
+  cm3: 'см³',
+  terms: ['Сервіс надає інформаційні звіти на основі відкритих державних наборів даних. Звіт не є гарантією технічного стану чи юридичної чистоти авто: завжди робіть огляд у сервісі та перевіряйте документи. Сервіс не несе відповідальності за рішення, ухвалені на підставі звіту.', 'Дані можуть бути неповними або застарілими. Відсутність запису не означає відсутності події. Збіг з базою розшуку потребує перевірки в уповноважених органах.', 'Платні тарифи (коли будуть увімкнені) — разова оплата. Якщо за VIN не знайдено жодних даних у жодному з джерел, кошти повертаються автоматично.', 'Ми зберігаємо запити (VIN або номер, мову, дату) до 90 днів, email — лише якщо ви його вказали (для листа про запуск чи замовлення), та технічні дані для захисту від зловживань. Дані картки обробляє Stripe, вони нам недоступні.', 'Контакти: '],
+  pricing_lead: 'Разова оплата, без підписок. Поки що все безкоштовно.',
+});
+Object.assign(D.ru, {
+  f_base: 'Базовый уровень', t_risk: 'Risk Score',
+  risk_limited: 'Для авто не из США отзывные кампании, жалобы и краш-тесты NHTSA недоступны, поэтому оценка опирается на меньше данных.',
+  nhtsa_en: 'Описания от NHTSA приведены на английском.', asof_full: 'Данные по состоянию на {t} UTC.', share_note: 'Ссылка содержит VIN и открывается у любого, кто её получил.',
+  terms_del: 'Чтобы удалить свои данные, напишите нам: ',
+  sub: 'Розыск Нацполиции, история регистраций в Украине, отзывные кампании и краш-тесты NHTSA (для моделей из США) — по открытым государственным данным.',
+  usa_p1: 'Авто с американских аукционов нередко бывают после ДТП, наводнения или града, и об этом не всегда сообщают. Мы показываем то, что можно проверить уже сейчас в открытых базах: розыск, регистрации в Украине, отзывные кампании, жалобы и краш-тесты.',
+  c_nocover: 'В реестре записей нет, а авто из-за границы: дополнительно выясните историю ввоза и данные таможенного оформления.',
+  recalls_check: 'Выполнены ли работы — проверьте по VIN на nhtsa.gov/recalls или у официального дилера.',
+  cm3: 'см³',
+  terms: ['Сервис предоставляет информационные отчёты на основе открытых государственных наборов данных. Отчёт не гарантирует техническое состояние или юридическую чистоту авто: всегда проводите осмотр в сервисе и проверяйте документы. Сервис не отвечает за решения, принятые на основании отчёта.', 'Данные могут быть неполными или устаревшими. Отсутствие записи не означает отсутствия события. Совпадение с базой розыска требует проверки в уполномоченных органах.', 'Платные тарифы (когда будут включены) — разовая оплата. Если по VIN не найдено никаких данных ни в одном из источников, деньги возвращаются автоматически.', 'Мы храним запросы (VIN или номер, язык, дату) до 90 дней, email — только если вы его указали (для письма о запуске или заказа), и технические данные для защиты от злоупотреблений. Данные карты обрабатывает Stripe, они нам недоступны.', 'Контакты: '],
+  pricing_lead: 'Разовая оплата, без подписок. Пока всё бесплатно.',
+});
+Object.assign(D.en, {
+  f_base: 'Baseline', t_risk: 'Risk Score',
+  risk_limited: 'For non-US cars NHTSA recalls, complaints and crash tests are unavailable, so the score rests on less data.',
+  nhtsa_en: 'NHTSA descriptions are shown in English.', asof_full: 'Data as of {t} UTC.', share_note: 'The link contains the VIN and opens for anyone who has it.',
+  terms_del: 'To have your data deleted, write to us: ',
+  sub: 'National Police wanted list, Ukrainian registration history, safety recalls and NHTSA crash tests (US-market models) — from open government data.',
+  hero_badge: 'Free · open data of the Ministry of Internal Affairs and National Police',
+  ua_notchecked: 'Not verified: the registry covers only {from} — {to}. For cars imported or re-registered earlier, an absence of records guarantees nothing.',
+  c_default: ['Have the car inspected: body, paint, airbags, gearbox. Documents will not show these.', 'Compare the VIN on the body with the registration certificate.', 'Check the wanted list again just before the deal: it is updated regularly.'],
+  w_seized: 'Date of unlawful taking', c_nocover: 'There are no registry records and the car is from abroad: also find out its import history and customs papers.',
+  cm3: 'cc',
+  terms: ['The service provides informational reports built from open government datasets. A report does not guarantee the mechanical condition or legal status of a car: always get an inspection and check the documents. The service is not liable for decisions made on the basis of a report.', 'Data may be incomplete or outdated. No record does not mean no event. A wanted-list match must be verified with the competent authorities.', 'Paid plans (when enabled) are a one-time payment. If no data is found in any source for the VIN, the payment is refunded automatically.', 'We keep lookups (VIN or plate, language, date) for up to 90 days, an email only if you provide one (for the launch notice or an order), and technical data for abuse protection. Card data is handled by Stripe and never reaches us.', 'Contact: '],
+  pricing_lead: 'One-time payment, no subscription. Everything is free for now.',
+});
+// короткие title (≤60) и description (≤160)
+D.uk.lp_wanted.t = 'Як перевірити авто на розшук за VIN і номером | VINScope';
+D.ru.lp_wanted.t = 'Как проверить авто на розыск по VIN и номеру | VINScope';
+D.en.lp_wanted.t = 'How to check if a car is wanted by VIN or plate | VINScope';
+D.uk.lp_plate.t = 'Перевірка авто за держномером: реєстр і розшук | VINScope';
+D.ru.lp_plate.t = 'Проверка авто по госномеру: реестр и розыск | VINScope';
+D.en.lp_plate.t = 'Vehicle check by Ukrainian plate number | VINScope';
+D.uk.home_desc = 'Безкоштовна перевірка авто в розшуку за VIN і держномером: розшук Нацполіції, реєстр МВС, відкликання та краш-тести NHTSA.';
+D.ru.home_desc = 'Бесплатная проверка авто в розыске по VIN и госномеру: розыск Нацполиции, реестр МВД, отзывные кампании и краш-тесты NHTSA.';
