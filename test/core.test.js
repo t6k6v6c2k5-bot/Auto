@@ -119,3 +119,13 @@ test('insurance: нормализация ответа поставщика ОС
   assert.equal(normalizeInsurance({ active: false }).status, 'none');
   assert.equal(normalizeInsurance({}).status, 'unknown');
 });
+
+test('МТСБУ: разбор GetStatus и GetHistory', async () => {
+  const { normalizeStatus, normalizeHistory } = await import('../src/mtsbu.js');
+  const st = normalizeStatus({ SearchResult: [{ 'FContract.DViewStatus.Code': 'Canceled ', 'FContract.DInsurer.Name': 'А' }, { 'FContract.DViewStatus.Code': 'Active ', 'FContract.DInsurer.Name': 'УНІКА', 'FContract.DVehicleType.Name': 'легковий;', 'FContract.PropertyLimit': '50000,0000', 'FContract.LifeLimit': '100000,0000', 'FContract.Franchise': '500,0000' }] });
+  assert.equal(st.status, 'active'); assert.equal(st.insurer, 'УНІКА'); assert.equal(st.kind, 'легковий'); assert.deepEqual(st.limits, { property: 50000, life: 100000, franchise: 500 });
+  assert.equal(normalizeStatus({ SearchResult: [{ 'FContract.DViewStatus.Code': 'Canceled' }] }).status, 'none');
+  assert.equal(normalizeStatus({ SearchResult: [{ 'FContract.DViewStatus.Code': 'Reserve' }] }).status, 'pending');
+  const h = normalizeHistory({ BMClass: '12', BMCoef: '0,91', SearchResult: [{ 'FContract.StartYear': '2014', 'FContract.CaseCount': '' }, { 'FContract.StartYear': '2015', 'FContract.DInsurer.Name': 'СКАЙД', 'FContract.CaseCount': '2', 'FContract.TotalClaimspaid': '1500,5' }] });
+  assert.equal(h.bmClass, '12'); assert.equal(h.claims, 2); assert.equal(h.policies[0].year, '2015'); assert.equal(h.policies[0].paid, 1500.5);
+});

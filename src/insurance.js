@@ -2,8 +2,9 @@
 // через договор с МТСБУ или партнёра-поставщика. Контракт: GET INSURANCE_API_URL?vin=&plate=&date=YYYY-MM-DD, Bearer INSURANCE_API_KEY
 //   -> { status: 'active'|'none'|'pending', insurer?, number?, from?, to?, kind? }
 import { cfg } from './config.js';
+import { mtsbuEnabled, mtsbuInsurance } from './mtsbu.js';
 
-export const insuranceEnabled = () => Boolean(cfg.insuranceUrl);
+export const insuranceEnabled = () => mtsbuEnabled() || Boolean(cfg.insuranceUrl);
 const TTL = 6 * 3600e3;
 const cache = new Map();
 const day = (v) => String(v || '').slice(0, 10);
@@ -20,6 +21,11 @@ export async function checkInsurance({ vin, plate = '' }, { fetchFn = fetch } = 
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return hit.v;
   try {
+    if (mtsbuEnabled()) {
+      const v = { ...(await mtsbuInsurance({ vin, plate }, { fetchFn })), checkedAt: new Date().toISOString() };
+      cache.set(key, { t: Date.now(), v });
+      return v;
+    }
     const u = new URL(cfg.insuranceUrl);
     if (vin) u.searchParams.set('vin', vin);
     if (plate) u.searchParams.set('plate', plate);

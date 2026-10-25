@@ -320,10 +320,15 @@ function usaBlock(lang, r) {
 
 function insuranceBlock(lang, r) {
   const d = dict(lang); const x = r.insurance;
-  if (!x || x.status === 'unknown') return '';
-  const ok = x.status === 'active';
-  const rows = [[d.ins_status, ok ? d.ins_active : x.status === 'pending' ? d.ins_pending : d.ins_none], [d.ins_insurer, x.insurer], [d.ins_period, x.from && x.to ? `${x.from} — ${x.to}` : ''], [d.ins_kind, x.kind]].filter(([, v]) => v);
-  return `<section class="panel${x.status === 'none' ? ' alert' : ''}" aria-labelledby="h-ins"><h2 id="h-ins">${esc(d.ins_h)}</h2><p class="${ok ? 'good' : ''}">${ok ? ic.check : ic.warn}<span>${esc(ok ? d.ins_active : x.status === 'pending' ? d.ins_pending : d.ins_none)}</span></p><dl class="spec-grid">${rows.slice(1).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><p class="muted sm">${esc(fmt(d.ins_note, { t: String(x.checkedAt || '').slice(0, 10) }))}</p></section>`;
+  if (!x || (x.status === 'unknown' && !x.history)) return '';
+  const loc = lang === 'en' ? 'en-US' : 'uk-UA'; const uah = (n) => (n || n === 0 ? `${Number(n).toLocaleString(loc)} ₴` : '');
+  const ok = x.status === 'active', known = x.status !== 'unknown';
+  const label = ok ? d.ins_active : x.status === 'pending' ? d.ins_pending : d.ins_none;
+  const L = x.limits || {};
+  const rows = [[d.ins_insurer, x.insurer], [d.ins_period, x.from && x.to ? `${x.from} — ${x.to}` : ''], [d.ins_kind, x.kind], [d.ins_lim_prop, uah(L.property)], [d.ins_lim_life, uah(L.life)], [d.ins_fr, L.franchise ? uah(L.franchise) : '']].filter(([, v]) => v);
+  const h = x.history;
+  const hist = h && h.policies.length ? `<h3>${esc(d.ins_hist_h)}</h3><div class="stats">${h.bmClass ? `<div><span>${esc(d.ins_bm)}</span><b>${esc(h.bmClass)}${h.bmCoef ? ` · ×${esc(h.bmCoef)}` : ''}</b></div>` : ''}<div><span>${esc(d.ins_pol_n)}</span><b>${h.policies.length}</b></div><div><span>${esc(d.ins_claims)}</span><b>${h.claims}</b></div></div><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.ins_hist_h)}"><table class="tl"><thead><tr><th scope="col">${esc(d.tl_date)}</th><th scope="col">${esc(d.ins_insurer)}</th><th scope="col">${esc(d.ins_claims)}</th><th scope="col">${esc(d.ins_paid)}</th></tr></thead><tbody>${h.policies.slice(0, 10).map((p) => `<tr><td data-l="${esc(d.tl_date)}">${esc(p.year)}</td><td data-l="${esc(d.ins_insurer)}">${esc(p.insurer)}</td><td data-l="${esc(d.ins_claims)}">${p.claims}</td><td data-l="${esc(d.ins_paid)}">${esc(uah(p.paid) || '—')}</td></tr>`).join('')}</tbody></table></div>` : h ? `<h3>${esc(d.ins_hist_h)}</h3><p class="muted">${esc(d.ins_hist_none)}</p>` : '';
+  return `<section class="panel${x.status === 'none' ? ' alert' : ''}" aria-labelledby="h-ins"><h2 id="h-ins">${esc(d.ins_h)}</h2>${known ? `<p class="${ok ? 'good' : ''}">${ok ? ic.check : ic.warn}<span>${esc(label)}</span></p>` : ''}${rows.length ? `<dl class="spec-grid">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}${hist}<p class="muted sm">${esc(fmt(d.ins_note, { t: String(x.checkedAt || '').slice(0, 10) }))}</p></section>`;
 }
 
 // «Згадки в мережі»: найденные поисковиком публикации об этом авто (домен, заголовок, тип, дата), без ссылок и контактов

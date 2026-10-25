@@ -10,6 +10,8 @@ export const cfg = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
   marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
+  mtsbuReadUrl: process.env.MTSBU_READ_URL || '',                // напр. https://policy-read-test.mtsbu.ua (тест) — read-сервисы Полис Онлайн МТСБУ
+  mtsbuToken: process.env.MTSBU_TOKEN || '',                    // Base64(логин:пароль), выдаёт МТСБУ
   insuranceUrl: process.env.INSURANCE_API_URL || '',            // поставщик проверки ОСЦПВ (договор с МТСБУ или партнёр): GET ?vin=&plate=&date=
   insuranceKey: process.env.INSURANCE_API_KEY || '',
   searchKey: process.env.SEARCH_API_KEY || '',                   // Brave Search API: упоминания авто в интернете
