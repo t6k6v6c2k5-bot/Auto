@@ -28,7 +28,9 @@
 | `OPERATOR_NAME`, `OPERATOR_DETAILS` | ФОП/ТОВ, ЄДРПОУ, адрес — в оферту и футер (нужны до приёма платежей) |
 | `ADMIN_KEY` | пароль для `/admin` (HTTP Basic, любое имя пользователя), минимум 16 символов |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | включают платный режим |
-| `REPORT_API_URL`, `REPORT_API_KEY` | необязательный платный поставщик (США): `GET ?vin=&plan=` → `{found, source, sections}` |
+| `MARKETCHECK_API_KEY` | **США и Канада:** история онлайн-объявлений по VIN (цены, пробег, дилеры, даты) через MarketCheck, около $0,006 за запрос. Включает детектор скрутки пробега. Ответы кэшируются 7 суток (пустые — сутки) |
+| `USA_DAILY_LIMIT` (500) | потолок платных запросов в сутки: защита бюджета |
+| `REPORT_API_URL`, `REPORT_API_KEY` | любой другой платный поставщик (аукционный): `GET ?vin=&plan=` → `{found, source, sections:{title, odometer[], auction[]}}`; аукционы показываются таблицей |
 | `REGISTRY_FROM_YEAR` (2013), `REGISTRY_MAX_GB` (3.5), `REGISTRY_DISABLED=1` | параметры загрузки реестра МВС (до 2021 — архивы только по номеру) |
 | `PLAUSIBLE_DOMAIN` | аналитика Plausible (события: search, waitlist, share, print, unlock) |
 

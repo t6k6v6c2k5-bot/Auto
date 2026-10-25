@@ -2,7 +2,7 @@
 // Каждый фактор — {pts, key, vars}; сумма баллов ровно равна показанному числу (в т.ч. базовый уровень).
 // Чего мы НЕ знаем (аукционы США, пробег, аварии), в баллы не превращается: это отдельная пометка в интерфейсе.
 const BASE = 12;
-export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mismatch, local }) {
+export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mismatch, local, usa }) {
   const factors = [{ pts: BASE, key: 'f_base', vars: {} }];
   const add = (pts, key, vars = {}) => factors.push({ pts, key, vars });
   const year = ua?.summary?.vehicle?.year || (decoded?.trusted ? decoded.year : null);
@@ -10,6 +10,7 @@ export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mi
 
   if (wanted.length) add(70, 'f_wanted');
   if (mismatch?.length) add(25, 'f_mismatch');
+  if (usa?.summary?.rollback) add(40, 'f_rollback', { from: usa.summary.rollback.from.m.toLocaleString('en-US'), to: usa.summary.rollback.to.m.toLocaleString('en-US') });
   const s = ua?.summary;
   if (s) {
     if (s.deregistered?.kind === 'scrap') add(30, 'f_scrap', { date: s.deregistered.date });

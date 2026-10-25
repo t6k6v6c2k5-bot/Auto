@@ -295,9 +295,24 @@ function safetyBlock(lang, r, full) {
 }
 
 function usaBlock(lang, r) {
-  const d = dict(lang); const s = r.usa?.found ? r.usa.sections : null;
-  if (!s) return `<section class="panel" aria-labelledby="h-usa"><h2 id="h-usa">${esc(d.usa_h)}</h2><p class="muted">${esc(d.usa_soon)}</p></section>`;
-  return `<section class="panel" aria-labelledby="h-usa"><h2 id="h-usa">${esc(d.usa_h)}</h2><pre class="raw">${esc(JSON.stringify(s, null, 2))}</pre></section>`;
+  const d = dict(lang); const u = r.usa;
+  const head = `<h2 id="h-usa">${esc(d.usa_h)}</h2>`;
+  if (!u || (!u.queried && !u.capped && !u.cached)) return `<section class="panel" aria-labelledby="h-usa"><h2 id="h-usa">${esc(d.usa_auc_h)}</h2><p class="muted">${esc(d.usa_soon)}</p></section>`;
+  if (u.capped) return `<section class="panel" aria-labelledby="h-usa">${head}<p class="muted">${esc(d.usa_capped)}</p></section>`;
+  if (!u.found) return `<section class="panel" aria-labelledby="h-usa">${head}<p>${esc(d.usa_none)}</p></section>`;
+  const sm = u.summary; const loc = lang === 'en' ? 'en-US' : 'uk-UA';
+  const money = (n) => (n || n === 0 ? '$' + Number(n).toLocaleString(loc) : '—');
+  const item = (k, v) => `<div><span>${esc(k)}</span><b>${v}</b></div>`;
+  const stats = sm ? `<div class="stats">${item(d.usa_sum_count, sm.count)}${item(d.usa_sum_first, esc(sm.first))}${item(d.usa_sum_last, esc(sm.last))}${item(d.usa_sum_price, sm.minPrice && sm.minPrice !== sm.maxPrice ? `${money(sm.minPrice)} – ${money(sm.maxPrice)}` : money(sm.lastPrice))}${sm.maxMiles ? item(d.usa_sum_miles, Number(sm.maxMiles).toLocaleString(loc)) : ''}${item(d.usa_sum_sellers, sm.sellers)}${sm.states.length ? item(d.usa_sum_states, esc(sm.states.slice(0, 6).join(', '))) : ''}</div>` : '';
+  const roll = sm?.rollback ? `<div class="notice bad">${ic.warn}<div>${esc(fmt(d.usa_rollback, { from: Number(sm.rollback.from.m).toLocaleString(loc), to: Number(sm.rollback.to.m).toLocaleString(loc), d1: sm.rollback.from.d, d2: sm.rollback.to.d }))}</div></div>` : '';
+  const row = (l) => `<tr><td data-l="${esc(d.usa_col_date)}">${esc(l.firstSeen)}</td><td data-l="${esc(d.usa_col_price)}">${money(l.price)}</td><td data-l="${esc(d.usa_col_miles)}">${l.miles ? Number(l.miles).toLocaleString(loc) : '—'}</td><td data-l="${esc(d.usa_col_seller)}">${esc(l.seller || '—')}</td><td data-l="${esc(d.usa_col_state)}">${esc(l.state)}</td><td data-l="${esc(d.usa_col_src)}">${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer nofollow">${esc(l.source || d.usa_link)}<span class="sr-only"> ${esc(d.ext_new_tab)}</span></a>` : esc(l.source)}</td></tr>`;
+  const th = ['usa_col_date', 'usa_col_price', 'usa_col_miles', 'usa_col_seller', 'usa_col_state', 'usa_col_src'].map((k) => `<th scope="col">${esc(d[k])}</th>`).join('');
+  const table = (rows) => `<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_tbl)}"><table class="tl"><caption class="sr-only">${esc(d.usa_tbl)}</caption><thead><tr>${th}</tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
+  const L = u.listings || [];
+  const listHtml = L.length ? `${table(L.slice(0, 5))}${L.length > 5 ? `<details><summary>${esc(fmt(d.usa_more, { n: L.length }))}</summary>${table(L.slice(5))}</details>` : ''}` : '';
+  const A = u.auction || [];
+  const aucHtml = A.length ? `<h3>${esc(d.usa_auc_h)}</h3><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_auc_h)}"><table class="tl"><thead><tr>${['auc_house', 'usa_col_date', 'auc_lot', 'auc_dmg', 'auc_repair', 'auc_bid', 'auc_keys', 'auc_runs', 'auc_photos'].map((k) => `<th scope="col">${esc(d[k])}</th>`).join('')}</tr></thead><tbody>${A.map((x) => `<tr><td data-l="${esc(d.auc_house)}">${esc(x.house)}</td><td data-l="${esc(d.usa_col_date)}">${esc(String(x.date || '').slice(0, 10))}</td><td data-l="${esc(d.auc_lot)}">${esc(x.lot)}</td><td data-l="${esc(d.auc_dmg)}">${esc([x.primaryDamage, x.secondaryDamage].filter(Boolean).join(' / '))}</td><td data-l="${esc(d.auc_repair)}">${money(x.estRepairUsd)}</td><td data-l="${esc(d.auc_bid)}">${money(x.finalBidUsd)}</td><td data-l="${esc(d.auc_keys)}">${x.keys == null ? '—' : esc(x.keys ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_runs)}">${x.runsDrives == null ? '—' : esc(x.runsDrives ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_photos)}">${esc(x.photos ?? '—')}</td></tr>`).join('')}</tbody></table></div>` : '';
+  return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(fmt(d.usa_src, { p: (u.providers || []).join(', ') }))}</p></section>`;
 }
 
 // ---------- шапка результата ----------

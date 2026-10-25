@@ -9,6 +9,9 @@ export const cfg = {
   stripeKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
+  marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
+  marketcheckBase: (process.env.MARKETCHECK_BASE || 'https://api.marketcheck.com').replace(/\/$/, ''),
+  usaDailyLimit: Number(process.env.USA_DAILY_LIMIT) || 500,   // потолок платных запросов в сутки (защита бюджета)
   reportApiUrl: process.env.REPORT_API_URL || '',   // URL вашего поставщика данных (Copart/IAAI/NMVTIS/ЕС)
   reportApiKey: process.env.REPORT_API_KEY || '',
   supportEmail: process.env.SUPPORT_EMAIL || '',            // не показываем вымышленный адрес: задайте реальный

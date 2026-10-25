@@ -434,3 +434,35 @@ Object.assign(D.en, {
   plate_unverified: 'Records were found by plate only and are not matched to the VIN. Make sure make and model match your car: the plate may have belonged to another one.',
   c_localonly: 'The registry has no records for this VIN since 2021: the car may simply have had no operations then. Enter its plate below to see the history from archives before 2021.',
 });
+
+// ---------- США: история объявлений и аукционы ----------
+Object.assign(D.uk, {
+  usa_h: 'США та Канада: історія оголошень і продажів', usa_none: 'Оголошень і записів за цим VIN у США та Канаді не знайдено. Це нічого не гарантує: приватні продажі й аукціони сюди можуть не потрапляти.', usa_capped: 'Ліміт запитів до постачальника даних на сьогодні вичерпано. Спробуйте завтра.',
+  usa_src: 'Джерело: {p}. Це історія онлайн-оголошень, а не підтверджені угоди: продано чи ні, визначити за ними не можна.',
+  usa_sum_count: 'Оголошень', usa_sum_first: 'Вперше помічено', usa_sum_last: 'Востаннє', usa_sum_price: 'Ціна, $', usa_sum_miles: 'Макс. пробіг, миль', usa_sum_sellers: 'Продавців', usa_sum_states: 'Штати',
+  usa_col_date: 'Дата', usa_col_price: 'Ціна', usa_col_miles: 'Пробіг, миль', usa_col_seller: 'Продавець', usa_col_state: 'Штат', usa_col_src: 'Джерело',
+  usa_rollback: 'Пробіг в оголошеннях зменшувався: {from} миль ({d1}) → {to} миль ({d2}). Це поширена ознака скрутки: ретельно перевірте пробіг.',
+  usa_more: 'Усі оголошення ({n})', usa_tbl: 'Історія оголошень', usa_link: 'Відкрити оголошення',
+  usa_auc_h: 'Аукціони', auc_house: 'Майданчик', auc_lot: 'Лот', auc_dmg: 'Пошкодження', auc_repair: 'Оцінка ремонту, $', auc_bid: 'Ціна продажу, $', auc_keys: 'Ключі', auc_runs: 'Їде', auc_photos: 'Фото', auc_yes: 'так', auc_no: 'ні',
+  f_rollback: 'Пробіг в оголошеннях зменшувався ({from} → {to} миль)', c_rollback: 'Порівняйте пробіг в оголошеннях з одометром і документами: у США було зафіксовано його зменшення.',
+});
+Object.assign(D.ru, {
+  usa_h: 'США и Канада: история объявлений и продаж', usa_none: 'Объявлений и записей по этому VIN в США и Канаде не найдено. Это ничего не гарантирует: частные продажи и аукционы сюда могут не попадать.', usa_capped: 'Лимит запросов к поставщику данных на сегодня исчерпан. Повторите завтра.',
+  usa_src: 'Источник: {p}. Это история онлайн-объявлений, а не подтверждённые сделки: продано ли авто, по ним определить нельзя.',
+  usa_sum_count: 'Объявлений', usa_sum_first: 'Впервые замечено', usa_sum_last: 'В последний раз', usa_sum_price: 'Цена, $', usa_sum_miles: 'Макс. пробег, миль', usa_sum_sellers: 'Продавцов', usa_sum_states: 'Штаты',
+  usa_col_date: 'Дата', usa_col_price: 'Цена', usa_col_miles: 'Пробег, миль', usa_col_seller: 'Продавец', usa_col_state: 'Штат', usa_col_src: 'Источник',
+  usa_rollback: 'Пробег в объявлениях уменьшался: {from} миль ({d1}) → {to} миль ({d2}). Это частый признак скрутки: тщательно проверьте пробег.',
+  usa_more: 'Все объявления ({n})', usa_tbl: 'История объявлений', usa_link: 'Открыть объявление',
+  usa_auc_h: 'Аукционы', auc_house: 'Площадка', auc_lot: 'Лот', auc_dmg: 'Повреждения', auc_repair: 'Оценка ремонта, $', auc_bid: 'Цена продажи, $', auc_keys: 'Ключи', auc_runs: 'На ходу', auc_photos: 'Фото', auc_yes: 'да', auc_no: 'нет',
+  f_rollback: 'Пробег в объявлениях уменьшался ({from} → {to} миль)', c_rollback: 'Сравните пробег в объявлениях с одометром и документами: в США зафиксировано его уменьшение.',
+});
+Object.assign(D.en, {
+  usa_h: 'US & Canada: listing and sales history', usa_none: 'No listings or records for this VIN in the US or Canada. That guarantees nothing: private sales and auctions may not appear here.', usa_capped: 'Today\'s request limit to the data provider is used up. Try again tomorrow.',
+  usa_src: 'Source: {p}. This is online listing history, not confirmed transactions: it cannot tell whether the car was actually sold.',
+  usa_sum_count: 'Listings', usa_sum_first: 'First seen', usa_sum_last: 'Last seen', usa_sum_price: 'Price, $', usa_sum_miles: 'Max mileage, mi', usa_sum_sellers: 'Sellers', usa_sum_states: 'States',
+  usa_col_date: 'Date', usa_col_price: 'Price', usa_col_miles: 'Mileage, mi', usa_col_seller: 'Seller', usa_col_state: 'State', usa_col_src: 'Source',
+  usa_rollback: 'Mileage in listings went down: {from} mi ({d1}) → {to} mi ({d2}). A common sign of odometer rollback: check the mileage carefully.',
+  usa_more: 'All listings ({n})', usa_tbl: 'Listing history', usa_link: 'Open listing',
+  usa_auc_h: 'Auctions', auc_house: 'Auction house', auc_lot: 'Lot', auc_dmg: 'Damage', auc_repair: 'Repair estimate, $', auc_bid: 'Sale price, $', auc_keys: 'Keys', auc_runs: 'Runs & drives', auc_photos: 'Photos', auc_yes: 'yes', auc_no: 'no',
+  f_rollback: 'Mileage in listings went down ({from} → {to} mi)', c_rollback: 'Compare the listing mileage with the odometer and documents: a decrease was recorded in the US.',
+});

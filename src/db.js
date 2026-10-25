@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS orders(
   credit_code TEXT, report TEXT, created_at INTEGER NOT NULL, paid_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS credits(code TEXT PRIMARY KEY, plan TEXT, remaining INTEGER NOT NULL, email TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS usa_cache(vin TEXT PRIMARY KEY, ts INTEGER NOT NULL, json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS photos(key TEXT PRIMARY KEY, url TEXT, page TEXT, title TEXT, ts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS waitlist(email TEXT PRIMARY KEY, lang TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS searches(id INTEGER PRIMARY KEY AUTOINCREMENT, vin TEXT, lang TEXT, created_at INTEGER NOT NULL);
@@ -64,3 +65,6 @@ export const stats = () => ({
 export const getPhotoRow = (key) => db.prepare('SELECT url,page,title,ts FROM photos WHERE key=?').get(key);
 export const setPhotoRow = (key, url, page, title) => db.prepare('INSERT OR REPLACE INTO photos(key,url,page,title,ts) VALUES(?,?,?,?,?)').run(key, url, page, title, Date.now());
 export const returnCredit = (code) => db.prepare('UPDATE credits SET remaining=remaining+1 WHERE code=?').run(code);
+
+export const getUsaCache = (vin) => { const r = db.prepare('SELECT ts, json FROM usa_cache WHERE vin=?').get(vin); return r ? { ts: r.ts, json: JSON.parse(r.json) } : null; };
+export const setUsaCache = (vin, obj) => db.prepare('INSERT OR REPLACE INTO usa_cache(vin,ts,json) VALUES(?,?,?)').run(vin, Date.now(), JSON.stringify(obj));
