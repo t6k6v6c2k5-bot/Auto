@@ -72,3 +72,11 @@ test('i18n: во всех языках одинаковый набор ключ�
   for (const l of LANGS) assert.deepEqual(Object.keys(dict(l)).sort(), base, l);
   assert.equal(t('en', 'f_owners', { n: 4 }), 'Owner changes: 4');
 });
+
+test('RDW: форматы нидерландских номеров', async () => {
+  const { looksLikeNlPlate, normalizeRdw } = await import('../src/rdw.js');
+  for (const p of ['GJ123B', '12ABC3', '1ABC23', 'AB1234', '12AB34', 'AB12CD']) assert.ok(looksLikeNlPlate(p), p);
+  for (const p of ['ABCDEF', '123456', 'AB123', 'AB12345']) assert.ok(!looksLikeNlPlate(p), p);
+  const n = normalizeRdw({ kenteken: 'GJ123B', merk: 'PEUGEOT', datum_eerste_toelating: '20150529', wam_verzekerd: 'Ja', export_indicator: 'Nee' }, [{ brandstof_omschrijving: 'Benzine', nettomaximumvermogen: '60' }]);
+  assert.equal(n.firstAdmission, '2015-05-29'); assert.equal(n.insured, true); assert.equal(n.exported, false); assert.equal(n.kw, 60);
+});

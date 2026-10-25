@@ -434,6 +434,34 @@ ${searchForm(lang, '', false, 'b')}<p class="muted sm">${esc(d.sources_note)}</p
   return layout(req, lang, { title: `${plate} — ${d.plate_h} | VINScope`, desc: d.plate_h, path: '/check', body, noindex: true });
 }
 
+const RDW_T = {
+  uk: { h: 'Нідерланди (RDW)', eyebrow: 'Реєстр RDW, Нідерланди', sub: 'Відкриті дані дорожньої служби Нідерландів. VIN у відкритих даних немає.', first: 'Перша реєстрація', firstNl: 'Перша реєстрація в Нідерландах', owner: 'Остання зміна власника', apk: 'Техогляд (APK) дійсний до', insured: 'Страхування (WAM)', yes: 'Так', no: 'Ні', exported: 'Позначка «експорт»', recall: 'Відкликання без ремонту', odo: 'Оцінка пробігу', odoOk: 'Логічний', odoBad: 'Нелогічний (можлива скрутка)', price: 'Каталожна ціна', engine: 'Двигун', color: 'Колір', kind: 'Тип', na: 'немає даних', note: 'Пробіг RDW не публікує — лише висновок про його логічність.', flagExp: 'Авто позначене як експортоване з Нідерландів — перевірте, чи воно ще на нідерландських номерах.', ukNone: 'У реєстрах України за цим номером записів немає.' },
+  ru: { h: 'Нидерланды (RDW)', eyebrow: 'Реестр RDW, Нидерланды', sub: 'Открытые данные дорожной службы Нидерландов. VIN в открытых данных нет.', first: 'Первая регистрация', firstNl: 'Первая регистрация в Нидерландах', owner: 'Последняя смена владельца', apk: 'Техосмотр (APK) действует до', insured: 'Страхование (WAM)', yes: 'Да', no: 'Нет', exported: 'Отметка «экспорт»', recall: 'Отзыв без ремонта', odo: 'Оценка пробега', odoOk: 'Логичный', odoBad: 'Нелогичный (возможна скрутка)', price: 'Каталожная цена', engine: 'Двигатель', color: 'Цвет', kind: 'Тип', na: 'нет данных', note: 'Пробег RDW не публикует — только вывод о его логичности.', flagExp: 'Авто помечено как экспортированное из Нидерландов — проверьте, остаётся ли оно на нидерландских номерах.', ukNone: 'В реестрах Украины по этому номеру записей нет.' },
+  en: { h: 'Netherlands (RDW)', eyebrow: 'RDW register, Netherlands', sub: 'Open data of the Dutch vehicle authority. Open data does not include the VIN.', first: 'First registration', firstNl: 'First registered in the Netherlands', owner: 'Last owner change', apk: 'MOT (APK) valid until', insured: 'Insurance (WAM)', yes: 'Yes', no: 'No', exported: 'Export flag', recall: 'Unrepaired recall', odo: 'Odometer verdict', odoOk: 'Logical', odoBad: 'Illogical (possible rollback)', price: 'List price', engine: 'Engine', color: 'Colour', kind: 'Type', na: 'no data', note: 'RDW does not publish the odometer reading, only a plausibility verdict.', flagExp: 'The car is flagged as exported from the Netherlands. Check whether it still carries Dutch plates.', ukNone: 'No records for this plate in the Ukrainian registers.' },
+};
+export function rdwReport(req, lang, plate, v, wanted) {
+  const d = dict(lang), t = RDW_T[lang];
+  const yn = (b) => (b === null ? t.na : b ? t.yes : t.no);
+  const title = [v.brand, v.model].filter(Boolean).join(' ') + (v.firstAdmission ? ', ' + v.firstAdmission.slice(0, 4) : '');
+  const bad = v.odometerVerdict && v.odometerVerdict !== 'Logisch';
+  const rows = [
+    [t.first, v.firstAdmission], [t.firstNl, v.firstNl], [t.owner, v.registered], [t.apk, v.apkUntil],
+    [t.insured, yn(v.insured)], [t.exported, yn(v.exported)], [t.recall, yn(v.openRecall)],
+    [t.odo, v.odometerVerdict ? (bad ? t.odoBad : t.odoOk) + (v.odometerYear ? ` (${v.odometerYear})` : '') : t.na],
+    [t.price, v.listPrice ? `€${v.listPrice.toLocaleString('en')}` : ''], [t.kind, v.kind], [t.color, v.color],
+    [t.engine, [v.fuel, v.cc && `${v.cc} ${d.cm3}`, v.kw && `${v.kw} kW`].filter(Boolean).join(' · ')],
+  ].filter(([, x]) => x);
+  const flags = [v.exported && t.flagExp, bad && t.odoBad].filter(Boolean);
+  const hit = wanted.length > 0;
+  const wantedHtml = hit ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p></section>` : '';
+  const main = `${wantedHtml}${flags.length ? `<div class="notice">${flags.map(esc).join('<br>')}</div>` : ''}<section class="panel"><h2>${esc(t.h)}</h2><dl class="kv">${rows.map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl><p class="muted sm">${esc(t.note)}</p></section>
+<div class="notice info">${esc(t.ukNone)} ${esc(t.sub)}</div>${searchForm(lang, '', false, 'b')}`;
+  const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a>
+<div class="vehicle solo"><div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate)}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
+<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${actionsBlock(lang)}</aside></div></section>`;
+  return layout(req, lang, { title: `${plate} — ${t.h} | VINScope`, desc: t.sub, path: '/check', body, noindex: true });
+}
+
 export function plateNotFound(req, lang, plate, cov, wanted) {
   const d = dict(lang);
   const w = wanted.length ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(q.unit)}</dd></dl>`).join('')}</section>` : '';

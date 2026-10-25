@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -162,12 +163,14 @@ async function page(req, res, url, lang, rest) {
       return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early, unverified }));
     }
     const plate = normalizePlate(raw);
-    if (!looksLikePlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);
+    if (!looksLikePlate(plate) && !looksLikeNlPlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);
     store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
     const hist = historyByPlate(plate);
     if (hist.rows.length) return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate)));
+    const nl = await lookupPlate(plate);
+    if (nl) return priv(V.rdwReport(req, lang, plate, nl, wantedByPlate(plate)));
     return priv(V.plateNotFound(req, lang, plate, totalCoverage(), wantedByPlate(plate)));
   }
   if (rest === '/checkout') {
