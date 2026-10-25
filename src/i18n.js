@@ -466,3 +466,26 @@ Object.assign(D.en, {
   usa_auc_h: 'Auctions', auc_house: 'Auction house', auc_lot: 'Lot', auc_dmg: 'Damage', auc_repair: 'Repair estimate, $', auc_bid: 'Sale price, $', auc_keys: 'Keys', auc_runs: 'Runs & drives', auc_photos: 'Photos', auc_yes: 'yes', auc_no: 'no',
   f_rollback: 'Mileage in listings went down ({from} → {to} mi)', c_rollback: 'Compare the listing mileage with the odometer and documents: a decrease was recorded in the US.',
 });
+
+// ---------- Официальные страховые проверки (внешние ссылки) ----------
+Object.assign(D.uk, {
+  extra_h: 'Додаткові офіційні перевірки', extra_note: 'Це зовнішні офіційні сервіси, відкриються в новій вкладці. Ми нічого не передаємо їм про вас.',
+  x_osago: 'Чи є чинний поліс ОСЦПВ (МТСБУ)', x_osago_p: 'Офіційна база МТСБУ за держномером або VIN показує, чи застраховане авто на потрібну дату і яким страховиком. Потрібно пройти капчу.',
+  x_hist: 'Довідка про страхову історію (МТСБУ)', x_hist_p: 'Власник авто безкоштовно отримує в МТСБУ довідку про страхові випадки та ДТП за 7 років (через КЕП або Дія.Підпис). Попросіть її в продавця: справжність перевіряється за QR-кодом.',
+  x_nicb: 'NICB VINCheck (США)', x_nicb_p: 'Безкоштовно: чи не значиться авто викраденим або списаним страховиками-учасниками. До 5 перевірок на добу з однієї адреси.',
+  x_nmvtis: 'NMVTIS (США)', x_nmvtis_p: 'Офіційний сайт Мін\'юсту США зі списком схвалених постачальників історії title, total loss і пробігу.',
+});
+Object.assign(D.ru, {
+  extra_h: 'Дополнительные официальные проверки', extra_note: 'Это внешние официальные сервисы, откроются в новой вкладке. Мы ничего не передаём им о вас.',
+  x_osago: 'Есть ли действующий полис ОСАГО (МТСБУ)', x_osago_p: 'Официальная база МТСБУ по госномеру или VIN показывает, застраховано ли авто на нужную дату и каким страховщиком. Нужно пройти капчу.',
+  x_hist: 'Справка о страховой истории (МТСБУ)', x_hist_p: 'Владелец авто бесплатно получает в МТСБУ справку о страховых случаях и ДТП за 7 лет (через КЭП или Дія.Підпис). Попросите её у продавца: подлинность проверяется по QR-коду.',
+  x_nicb: 'NICB VINCheck (США)', x_nicb_p: 'Бесплатно: не значится ли авто угнанным или списанным страховщиками-участниками. До 5 проверок в сутки с одного адреса.',
+  x_nmvtis: 'NMVTIS (США)', x_nmvtis_p: 'Официальный сайт Минюста США со списком одобренных поставщиков истории title, total loss и пробега.',
+});
+Object.assign(D.en, {
+  extra_h: 'More official checks', extra_note: 'These are external official services and open in a new tab. We pass them nothing about you.',
+  x_osago: 'Is there a valid compulsory insurance policy (MTSBU)', x_osago_p: 'The official MTSBU database, by plate or VIN, shows whether the car was insured on the date you need and by which insurer. You must solve a captcha.',
+  x_hist: 'Insurance history certificate (MTSBU)', x_hist_p: 'A car owner can get a free MTSBU certificate of insurance claims and accidents for 7 years (via a qualified e-signature or Diia.Pidpys). Ask the seller for it: authenticity is verified by QR code.',
+  x_nicb: 'NICB VINCheck (US)', x_nicb_p: 'Free: whether the car is reported stolen or salvaged by member insurers. Up to 5 checks per day per address.',
+  x_nmvtis: 'NMVTIS (US)', x_nmvtis_p: 'The official US Department of Justice site listing approved providers of title, total-loss and odometer history.',
+});

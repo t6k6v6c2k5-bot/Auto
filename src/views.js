@@ -294,6 +294,17 @@ function safetyBlock(lang, r, full) {
   return `<section class="panel" aria-labelledby="h-safe"><h2 id="h-safe">${esc(d.safety_h)}</h2><h3>${esc(d.recalls_h)}</h3>${recHtml}<h3>${esc(d.comp_h)}</h3>${compHtml}${rateHtml ? `<h3>${esc(d.rate_h)}</h3>${rateHtml}` : ''}</section>`;
 }
 
+function extrasBlock(lang, r) {
+  const d = dict(lang);
+  const us = r.region === 'US' || r.region === 'CA' || r.decoded?.trusted;
+  const items = [
+    ['https://policy.mtsbu.ua/', d.x_osago, d.x_osago_p],
+    ['https://mtsbu.ua/services/otrimannya-dovidki-pro-strahovu-istoriyu', d.x_hist, d.x_hist_p],
+    ...(us ? [['https://www.nicb.org/vincheck', d.x_nicb, d.x_nicb_p], ['https://www.vehiclehistory.gov/', d.x_nmvtis, d.x_nmvtis_p]] : []),
+  ];
+  return `<section class="panel" aria-labelledby="h-extra"><h2 id="h-extra">${esc(d.extra_h)}</h2><ul class="srclist">${items.map(([u, a, b]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer"><b>${esc(a)}</b><span class="sr-only"> ${esc(d.ext_new_tab)}</span></a><span>${esc(b)}</span></li>`).join('')}</ul><p class="muted sm">${esc(d.extra_note)}</p></section>`;
+}
+
 function usaBlock(lang, r) {
   const d = dict(lang); const u = r.usa;
   const head = `<h2 id="h-usa">${esc(d.usa_h)}</h2>`;
@@ -385,7 +396,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const main = full
-    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}${extrasBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const aside = full
     ? `${actionsBlock(lang)}${waitlistBox(lang)}`
