@@ -9,7 +9,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { cfg, PLANS, paywallOn, price } from './src/config.js';
+import { cfg, PLANS, paywallOn, price, CURRENCY } from './src/config.js';
 import { LANGS, dict } from './src/i18n.js';
 import { validateVin } from './src/vin.js';
 import { normalizePlate, looksLikePlate } from './src/plate.js';
@@ -94,7 +94,7 @@ async function api(req, res, url) {
       await fulfil(o.id);
       return json(req, res, 200, { url: `/${lang}/report/${o.token}` });
     }
-    const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: plan.usd, lang });
+    const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: plan.amount, lang });
     try {
       const d = dict(lang).plans[b.plan];
       const s = await stripe.createCheckout({
@@ -219,7 +219,7 @@ async function page(req, res, url, lang, rest) {
     try {
       if (o.stripe_session && !o.report && o.status === 'pending') {
         const s = await stripe.getSession(o.stripe_session);
-        if (s.payment_status === 'paid' && s.amount_total === o.amount && s.currency === 'usd' && store.claimPaid(o.id, s.payment_intent)) await fulfil(o.id);
+        if (s.payment_status === 'paid' && s.amount_total === o.amount && s.currency === CURRENCY && store.claimPaid(o.id, s.payment_intent)) await fulfil(o.id);
       } else if (!o.report) await fulfil(o.id);
     } catch (e) { console.error('success check', e.message); }
     return redirect(res, `/${lang}/report/${o.token}`);
@@ -294,7 +294,7 @@ const server = createServer(async (req, res) => {
       const so = ev.data?.object;
       if (ev.type === 'checkout.session.completed' && so?.payment_status === 'paid') {
         const o = store.getOrder(so.client_reference_id);
-        if (o && so.amount_total === o.amount && so.currency === 'usd' && store.claimPaid(o.id, so.payment_intent)) await fulfil(o.id);
+        if (o && so.amount_total === o.amount && so.currency === CURRENCY && store.claimPaid(o.id, so.payment_intent)) await fulfil(o.id);
       }
       return send(req, res, 200, 'ok', 'text/plain');
     }

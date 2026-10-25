@@ -111,9 +111,9 @@ export function planCards(lang, vin = '', soon = false) {
   const d = dict(lang);
   return `<ul class="plans" role="list">${Object.entries(PLANS).map(([id, p]) => {
     const [name, desc] = d.plans[id];
-    const per = p.count > 1 ? `<small>${price(Math.round(p.usd / p.count))} ${esc(d.per)}</small>` : '';
+    const per = p.count > 1 ? `<small>${price(Math.round(p.amount / p.count))} ${esc(d.per)}</small>` : '';
     return `<li class="plan ${p.popular ? 'pop' : ''}">${p.popular && !soon ? `<span class="badge">${esc(d.popular)}</span>` : ''}
-<h3>${esc(name)}</h3><div class="amt">${price(p.usd)}</div>${per}<p>${esc(desc)}</p>
+<h3>${esc(name)}</h3><div class="amt">${price(p.amount)}</div>${per}<p>${esc(desc)}</p>
 <a class="btn ${p.popular ? 'primary' : 'ghost'}" href="${soon ? '#notify' : `/${lang}/checkout?plan=${id}${vin ? '&vin=' + encodeURIComponent(vin) : ''}`}">${esc(soon ? d.plan_notify : d.choose)}</a></li>`;
   }).join('')}</ul>`;
 }
@@ -355,7 +355,7 @@ function paidBlock(lang, r) {
   const items = [r.usMarket && providerEnabled() && d.pd_usa, insuranceEnabled() && d.pd_ins, mentionsEnabled() && d.pd_web].filter(Boolean);
   if (!items.length) return '';
   const cta = paywallOn()
-    ? `<a class="btn primary wide" href="/${lang}/checkout?plan=single&amp;vin=${encodeURIComponent(r.vin)}">${esc(d.pd_btn)} — ${price(PLANS.single.usd)}</a>`
+    ? `<a class="btn primary wide" href="/${lang}/checkout?plan=single&amp;vin=${encodeURIComponent(r.vin)}">${esc(d.pd_btn)} — ${price(PLANS.single.amount)}</a>`
     : '';
   return `<section class="panel paidteaser" aria-labelledby="h-paid"><h2 id="h-paid">${ic.lock}${esc(d.pd_h)}</h2><ul class="check tight">${items.map((x) => `<li>${ic.check}<span>${esc(x)}</span></li>`).join('')}</ul>${cta}</section>${paywallOn() ? '' : waitlistBox(lang, 'notify-paid')}`;
 }
@@ -481,7 +481,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const d = dict(lang);
   const title = vehicleTitle(r, r.vin);
   const hit = r.wanted.length > 0;
-  const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
+  const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.amount)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const usa = r.usa && (r.usa.queried || r.usa.capped || r.usa.cached) ? usaBlock(lang, r) : '';
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
@@ -574,13 +574,13 @@ export function checkoutPage(req, lang, { plan, vin }) {
   const d = dict(lang);
   const p = PLANS[plan]; const [name, desc] = d.plans[plan];
   const body = `<section class="sec"><div class="wrap narrow"><h1>${esc(d.co_h)}</h1>
-<div class="panel"><h2>${esc(`${name} — ${price(p.usd)}`)}</h2><p class="muted">${esc(desc)}</p>
+<div class="panel"><h2>${esc(`${name} — ${price(p.amount)}`)}</h2><p class="muted">${esc(desc)}</p>
 <form id="co" class="stack" data-lang="${lang}" data-plan="${plan}">
 <label>${esc(d.co_vin)}<input name="vin" value="${esc(vin)}" maxlength="23" required autocapitalize="characters" autocorrect="off" spellcheck="false" class="mono"></label>
 <label>${esc(d.co_email)}<input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com"></label>
 <label>${esc(d.code_ph)}<input name="code" placeholder="VS-XXXXXXXXXX-XXXXXX" autocomplete="off" autocapitalize="characters" class="mono"></label>
 <p class="err" id="coerr" role="alert"></p>
-<button class="btn primary wide" type="submit">${esc(`${d.co_pay} · ${price(p.usd)}`)}</button>
+<button class="btn primary wide" type="submit">${esc(`${d.co_pay} · ${price(p.amount)}`)}</button>
 <p class="muted sm">${ic.lock}${esc(d.co_secure)}</p></form></div></div></section>`;
   return layout(req, lang, { title: d.co_h + ' — VINScope', desc: d.co_h, path: '/checkout', body, noindex: true });
 }

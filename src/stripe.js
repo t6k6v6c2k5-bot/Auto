@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { cfg } from './config.js';
+import { CURRENCY, cfg } from './config.js';
 
 async function call(method, path, params) {
   const r = await fetch('https://api.stripe.com/v1' + path, {
@@ -17,7 +17,7 @@ export const createCheckout = ({ order, name, description, successUrl, cancelUrl
   call('POST', '/checkout/sessions', {
     mode: 'payment',
     'line_items[0][quantity]': '1',
-    'line_items[0][price_data][currency]': 'usd',
+    'line_items[0][price_data][currency]': CURRENCY,
     'line_items[0][price_data][unit_amount]': String(order.amount),
     'line_items[0][price_data][product_data][name]': name,
     'line_items[0][price_data][product_data][description]': description,

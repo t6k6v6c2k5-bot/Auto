@@ -31,9 +31,11 @@ export const cfg = {
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.
 export const paywallOn = () => Boolean(cfg.stripeKey);
 
+// цены в копейках гривны (Stripe: currency uah)
+export const CURRENCY = 'uah';
 export const PLANS = {
-  single: { usd: 599,  count: 1 },
-  pack3:  { usd: 1499, count: 3, popular: true },
-  dealer: { usd: 3900, count: 10 },
+  single: { amount: 9900,  count: 1 },
+  pack3:  { amount: 24900, count: 3, popular: true },
+  dealer: { amount: 69000, count: 10 },
 };
-export const price = (cents) => `$${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
+export const price = (kop) => `${(kop / 100).toFixed(kop % 100 ? 2 : 0).replace('.', ',')} ₴`;
