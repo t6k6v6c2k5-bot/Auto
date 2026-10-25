@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS credits(code TEXT PRIMARY KEY, plan TEXT, remaining I
 CREATE TABLE IF NOT EXISTS usa_cache(vin TEXT PRIMARY KEY, ts INTEGER NOT NULL, json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS photos(key TEXT PRIMARY KEY, url TEXT, page TEXT, title TEXT, ts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS waitlist(email TEXT PRIMARY KEY, lang TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS mentions(key TEXT NOT NULL, url TEXT NOT NULL, domain TEXT, title TEXT, kind TEXT, published TEXT, found_at INTEGER NOT NULL, PRIMARY KEY(key,url));
+CREATE TABLE IF NOT EXISTS mention_checks(key TEXT PRIMARY KEY, ts INTEGER NOT NULL, n INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS searches(id INTEGER PRIMARY KEY AUTOINCREMENT, vin TEXT, lang TEXT, created_at INTEGER NOT NULL);
 `);
 
@@ -49,6 +51,7 @@ export const setCreditOnce = (id, code) => db.prepare('UPDATE orders SET credit_
 // Срок хранения: поисковые запросы (VIN/номер) не держим дольше 90 дней
 export const purgeOld = () => {
   db.prepare("DELETE FROM orders WHERE status='pending' AND created_at<?").run(Date.now() - 7 * 864e5); // неоплаченные заказы с email
+  db.prepare('DELETE FROM mentions WHERE found_at<?').run(Date.now() - 180 * 864e5);
   return db.prepare('DELETE FROM searches WHERE created_at<?').run(Date.now() - 90 * 864e5).changes;
 };
 // повторный запрос того же VIN в течение 10 минут (обновление страницы) не считаем отдельной проверкой
@@ -74,3 +77,13 @@ export const returnCredit = (code) => db.prepare('UPDATE credits SET remaining=r
 
 export const getUsaCache = (vin) => { const r = db.prepare('SELECT ts, json FROM usa_cache WHERE vin=?').get(vin); return r ? { ts: r.ts, json: JSON.parse(r.json) } : null; };
 export const setUsaCache = (vin, obj) => db.prepare('INSERT OR REPLACE INTO usa_cache(vin,ts,json) VALUES(?,?,?)').run(vin, Date.now(), JSON.stringify(obj));
+
+// Упоминания авто в интернете (только данные об авто: домен, заголовок без контактов, тип, дата)
+export const getMentions = (key) => db.prepare('SELECT domain, title, kind, published, found_at FROM mentions WHERE key=? ORDER BY found_at DESC LIMIT 60').all(key);
+export const mentionCheck = (key) => db.prepare('SELECT ts, n FROM mention_checks WHERE key=?').get(key) || null;
+export const saveMentions = (key, items) => {
+  const ins = db.prepare('INSERT OR IGNORE INTO mentions(key,url,domain,title,kind,published,found_at) VALUES(?,?,?,?,?,?,?)');
+  for (const x of items) ins.run(key, x.url, x.domain, x.title, x.kind, x.published || '', Date.now());
+  db.prepare('INSERT OR REPLACE INTO mention_checks(key,ts,n) VALUES(?,?,?)').run(key, Date.now(), items.length);
+};
+export const mentionsTotal = () => db.prepare('SELECT COUNT(*) c FROM mentions').get().c;

@@ -33,6 +33,8 @@
 | `USA_DAILY_LIMIT` (500) | потолок платных запросов в сутки: защита бюджета |
 | `REPORT_API_URL`, `REPORT_API_KEY` | любой другой платный поставщик (аукционный): `GET ?vin=&plan=` → `{found, source, sections:{title, odometer[], auction[]}}`; аукционы показываются таблицей |
 | `REGISTRY_FROM_YEAR` (2013), `REGISTRY_MAX_GB` (3.5), `REGISTRY_DISABLED=1` | параметры загрузки реестра МВС (до 2021 — архивы только по номеру) |
+| `SEARCH_API_KEY` | **Упоминания в сети:** ключ Brave Search API (api.search.brave.com, $5 за 1000 запросов, ~$5 бесплатно в месяц). Ищется точный VIN/номер, сохраняются только домен, заголовок без контактов, тип и дата. Кэш 14 суток (пустые — 3 суток); раздел скрыт, пока ключа нет |
+| `SEARCH_DAILY_LIMIT` (300) | потолок поисковых запросов в сутки |
 | `RDW_BASE` | (тесты) база API RDW |
 | `PLAUSIBLE_DOMAIN` | аналитика Plausible (события: search, waitlist, share, print, unlock) |
 

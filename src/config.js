@@ -10,6 +10,9 @@ export const cfg = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
   marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
+  searchKey: process.env.SEARCH_API_KEY || '',                   // Brave Search API: упоминания авто в интернете
+  searchBase: process.env.SEARCH_BASE || 'https://api.search.brave.com/res/v1',
+  searchDailyLimit: Number(process.env.SEARCH_DAILY_LIMIT) || 300,
   marketcheckBase: (process.env.MARKETCHECK_BASE || 'https://api.marketcheck.com').replace(/\/$/, ''),
   usaDailyLimit: Number(process.env.USA_DAILY_LIMIT) || 500,   // потолок платных запросов в сутки (защита бюджета)
   reportApiUrl: process.env.REPORT_API_URL || '',   // URL вашего поставщика данных (Copart/IAAI/NMVTIS/ЕС)

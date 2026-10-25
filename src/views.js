@@ -318,6 +318,17 @@ function usaBlock(lang, r) {
   return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(fmt(d.usa_src, { p: (u.providers || []).join(', ') }))}</p></section>`;
 }
 
+// «Згадки в мережі»: найденные поисковиком публикации об этом авто (домен, заголовок, тип, дата), без ссылок и контактов
+function mentionsBlock(lang, r) {
+  const d = dict(lang); const m = r.mentions;
+  if (!m) return '';
+  const kinds = ['sale', 'auction', 'accident', 'wanted', 'other'];
+  const by = Object.fromEntries(kinds.map((k) => [k, m.items.filter((x) => x.kind === k)]));
+  const row = (x) => `<tr><td data-l="${esc(d.mn_site)}">${esc(x.domain)}</td><td data-l="${esc(d.mn_title)}" lang="auto">${esc(x.title)}</td><td data-l="${esc(d.tl_date)}">${esc(x.published || dateOf(new Date(x.found_at).toISOString()))}</td></tr>`;
+  const groups = kinds.filter((k) => by[k].length).map((k) => `<h3>${esc(d['mn_' + k])} · ${by[k].length}</h3><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d['mn_' + k])}"><table class="tl"><thead><tr><th scope="col">${esc(d.mn_site)}</th><th scope="col">${esc(d.mn_title)}</th><th scope="col">${esc(d.tl_date)}</th></tr></thead><tbody>${by[k].slice(0, 8).map(row).join('')}</tbody></table></div>`).join('');
+  return `<section class="panel" aria-labelledby="h-mn"><h2 id="h-mn">${esc(d.mn_h)}</h2>${m.items.length ? groups : `<p>${esc(d.mn_none)}</p>`}<p class="muted sm">${esc(d.mn_note)}</p></section>`;
+}
+
 // «Паспорт авто»: все известное о машине из реестра, декодера и локальной расшифровки в одной сетке
 function passportBlock(lang, r) {
   const d = dict(lang); const x = r.decoded, us = r.ua.summary, v = us?.vehicle || {}, l = r.local;
@@ -426,10 +437,10 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const usa = r.usa && (r.usa.queried || r.usa.capped || r.usa.cached) ? usaBlock(lang, r) : '';
-  const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ['g-safe', d.g_safe], ['g-next', d.g_next]];
+  const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe], ['g-next', d.g_next]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', 2) + usa : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full

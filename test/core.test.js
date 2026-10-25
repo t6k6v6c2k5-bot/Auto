@@ -97,3 +97,18 @@ test('Transport Canada: разбор описания отзыва', async () =>
   assert.equal(s.issue, 'Airbag may over-deploy.'); assert.equal(s.risk, 'Injury.'); assert.equal(s.system, 'Airbag');
   assert.match(parseSummary([{ Name: 'COMMENT_ETXT', Value: { Literal: 'Plain text. Correction: fix.' } }]).issue, /^Plain text\./);
 });
+
+test('mentions: фильтр точного совпадения, очистка контактов, классификация', async () => {
+  const { normalizeResults, scrub, classify, plateCyr } = await import('../src/mentions.js');
+  assert.equal(scrub('Honda Accord, тел. +380 67 123 45 67, a@b.com'), 'Honda Accord, тел. ,');
+  assert.equal(plateCyr('AE5340IM'), 'АЕ5340ІМ');
+  assert.equal(classify('olx.ua', 'продаж'), 'sale'); assert.equal(classify('copart.com', ''), 'auction');
+  assert.equal(classify('news.ua', 'Страшне ДТП'), 'accident'); assert.equal(classify('x.ua', 'авто в розшуку'), 'wanted');
+  const json = { web: { results: [
+    { url: 'https://www.olx.ua/d/1', title: 'Продам Honda 1HGCM82633A004352', description: '', page_age: '2025-03-01T00:00:00' },
+    { url: 'https://example.com/2', title: 'Unrelated', description: 'VIN 1HGCM82633A004999' },
+    { url: 'https://example.com/3', title: 'Other', description: 'no id here' },
+  ] } };
+  const r = normalizeResults(json, ['1HGCM82633A004352']);
+  assert.equal(r.length, 1); assert.equal(r[0].domain, 'olx.ua'); assert.equal(r[0].kind, 'sale'); assert.equal(r[0].published, '2025-03-01');
+});

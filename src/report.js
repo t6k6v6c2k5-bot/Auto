@@ -1,5 +1,6 @@
 // Сборка отчёта по VIN из реальных открытых источников.
 import { searchCount } from './db.js';
+import { findMentions } from './mentions.js';
 import { fuelEconomy } from './fueleco.js';
 import { canadaRecalls } from './canada.js';
 import { decodeVin, recalls as getRecalls, complaints as getComplaints, ratings as getRatings } from './nhtsa.js';
@@ -33,7 +34,7 @@ export function photoFits(photo, year) {
 
 const withDeadline = (p, ms, fallback) => Promise.race([p, new Promise((r) => setTimeout(() => r(fallback), ms))]);
 
-export async function buildReport(vin, { withProvider = false, plan = 'single' } = {}) {
+export async function buildReport(vin, { withProvider = false, plan = 'single', plate = '' } = {}) {
   const t0 = Date.now();
   const decoded = await withDeadline(decodeVin(vin), 6000, { found: false, unavailable: true });
   const left = () => Math.max(1500, 9000 - (Date.now() - t0));
@@ -52,6 +53,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   const wanted = wantedByVin(vin);
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
+  const mentions = await withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null);
   const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch, local, usa });
   const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : local ? { make: local.make, model: local.model, year: local.years.length === 1 ? local.years[0] : null } : { make: decoded.make };
@@ -69,7 +71,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   }
   return {
     vin, region, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), mentions, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }

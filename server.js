@@ -148,9 +148,9 @@ async function page(req, res, url, lang, rest) {
     const v = validateVin(raw);
     if (v.ok) {
       store.logSearch(v.vin, lang);
-      const r = await buildReport(v.vin, { withProvider: !paywallOn() }); // в бесплатном режиме платные данные США подтягиваем сразу (кэш + суточный лимит)
-      // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
+      const r = await buildReport(v.vin, { withProvider: !paywallOn(), plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // в бесплатном режиме платные данные США подтягиваем сразу (кэш + суточный лимит)
+      // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
       let early = [], unverified = false;
       if (fromPlate && looksLikePlate(fromPlate)) {
         const veh = r.ua.summary?.vehicle || {};
