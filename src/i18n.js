@@ -511,3 +511,6 @@ Object.assign(D.en, { ins_h: 'Compulsory motor insurance (OSCPV)', ins_active: '
 Object.assign(D.uk, { ins_lim_prop: 'Ліміт: майно', ins_lim_life: 'Ліміт: життя і здоров’я', ins_fr: 'Франшиза', ins_hist_h: 'Страхова історія за VIN', ins_hist_none: 'Раніше оформлених полісів за цим VIN у базі немає.', ins_bm: 'Клас бонус-малус', ins_pol_n: 'Полісів у історії', ins_claims: 'Страхових випадків', ins_paid: 'Виплачено' });
 Object.assign(D.ru, { ins_lim_prop: 'Лимит: имущество', ins_lim_life: 'Лимит: жизнь и здоровье', ins_fr: 'Франшиза', ins_hist_h: 'Страховая история по VIN', ins_hist_none: 'Ранее оформленных полисов по этому VIN в базе нет.', ins_bm: 'Класс бонус-малус', ins_pol_n: 'Полисов в истории', ins_claims: 'Страховых случаев', ins_paid: 'Выплачено' });
 Object.assign(D.en, { ins_lim_prop: 'Limit: property', ins_lim_life: 'Limit: life and health', ins_fr: 'Deductible', ins_hist_h: 'Insurance history by VIN', ins_hist_none: 'No earlier policies for this VIN in the database.', ins_bm: 'Bonus-malus class', ins_pol_n: 'Policies in history', ins_claims: 'Insurance claims', ins_paid: 'Paid out' });
+Object.assign(D.uk, { nav_tools: 'Інструменти' });
+Object.assign(D.ru, { nav_tools: 'Инструменты' });
+Object.assign(D.en, { nav_tools: 'Tools' });

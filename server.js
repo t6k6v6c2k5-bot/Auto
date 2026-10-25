@@ -1,5 +1,8 @@
 import { createServer } from 'node:http';
 import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
+import { toolsHub, toolPage } from './src/tools-views.js';
+import { TOOLS } from './src/tools-i18n.js';
+import { nbuRate } from './src/nbu.js';
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -135,6 +138,11 @@ async function page(req, res, url, lang, rest) {
     if (q) return html(V.home(req, lang, stats, { q, err: url.searchParams.get('e') || 'bad' }), 200, 'private, no-store', NOINDEX);
     return html(V.home(req, lang, stats));
   }
+  if (rest === '/tools') return html(toolsHub(req, lang));
+  if (rest.startsWith('/tools/') && TOOLS.includes(rest.slice(7))) {
+    const id = rest.slice(7);
+    return html(toolPage(req, lang, id, { rate: id === 'customs' ? await nbuRate() : null }));
+  }
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
   if (rest === '/sources') return html(V.sourcesPage(req, lang));
@@ -206,7 +214,7 @@ async function page(req, res, url, lang, rest) {
 // Дата последнего изменения контента — для sitemap
 const LASTMOD = new Date(Math.max(...['src/i18n.js', 'src/views.js'].map((f) => statSync(join(ROOT, f)).mtimeMs))).toISOString().slice(0, 10);
 function sitemap(req) {
-  const base = origin(req); const paths = ['/', '/wanted', '/plate', '/usa', '/sources', '/pricing', '/terms'];
+  const base = origin(req); const paths = ['/', '/tools', ...TOOLS.map((t) => '/tools/' + t), '/wanted', '/plate', '/usa', '/sources', '/pricing', '/terms'];
   const loc = (l, p) => `${base}/${l}${p === '/' ? '/' : p}`;
   const urls = paths.flatMap((p) => LANGS.map((l) => `<url><loc>${loc(l, p)}</loc><lastmod>${LASTMOD}</lastmod>${LANGS.map((a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${loc(a, p)}"/>`).join('')}<xhtml:link rel="alternate" hreflang="x-default" href="${loc('uk', p)}"/></url>`));
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join('')}</urlset>`;

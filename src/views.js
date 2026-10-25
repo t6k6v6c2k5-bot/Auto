@@ -2,6 +2,8 @@ import { LANGS, LOCALE, t, dict, plural } from './i18n.js';
 import { cfg, PLANS, price, paywallOn } from './config.js';
 import { origin } from './http.js';
 import { l100, gpkm } from './fueleco.js';
+import { toolsHomeBlock, diffBlock, toolCards } from './tools-views.js';
+import { TT } from './tools-i18n.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const abs = (req, p) => origin(req) + p;
@@ -42,8 +44,8 @@ const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : 
 export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '' }) {
   const alt = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(abs(req, '/' + l + path))}">`).join('');
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, '\\u003c')}</script>`).join('');
-  const links = [['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ['/pricing', 'nav_pricing']];
-  const cur = (p) => (path === p ? ' aria-current="page"' : '');
+  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ['/pricing', 'nav_pricing']];
+  const cur = (p) => (path === p || (p === '/tools' && path.startsWith('/tools/')) ? ' aria-current="page"' : '');
   const og = abs(req, `/og-${lang}.png`);
   const url = abs(req, '/' + lang + path);
   return `<!doctype html>
@@ -68,7 +70,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 <main id="main" tabindex="-1">${body}</main>
 <footer><div class="wrap foot"><div>${logo}<b>VINScope</b><p>${esc(t(lang, 'footer'))}</p></div>
 <div><p class="foot-h">${esc(t(lang, 'nav_sources'))}</p>${t(lang, 'srcs').map(([n, , u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n.split(' — ')[0])}<span class="sr-only"> ${esc(t(lang, 'ext_new_tab'))}</span></a>`).join('')}</div>
-<div><p class="foot-h">VINScope</p><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
+<div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
@@ -133,7 +135,8 @@ ${chip('c1', ['g', '<path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"
 ${chip('c2', ['b', '<path d="M5 7h14M5 12h14M5 17h9"/>'], d.t_reg, `${d.ua_owners} · ${d.ua_imported}`)}
 ${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'], `${d.risk_h} 0–100`, 'NHTSA')}</div>
 </div></section>
-<section class="sec alt"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
+${diffBlock(lang)}${toolsHomeBlock(lang)}
+<section class="sec"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
 <section class="sec"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
 <section class="sec dark"><div class="wrap"><h2 class="reveal">${esc(d.know_h)}</h2><ul class="grid4" role="list">${d.know.map(([h, p]) => `<li class="kcard reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
 <section class="sec alt"><div class="wrap narrow"><h2 class="reveal">${esc(d.src_h)}</h2><p class="sec-sub">${esc(d.src_p)}</p>${sourcesList(lang)}</div></section>
@@ -457,7 +460,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
-    ? `${toc}${actionsBlock(lang)}${waitlistBox(lang)}`
+    ? `${toc}${actionsBlock(lang)}<div class="panel noprint"><h2>${esc(TT[lang].nav)}</h2>${toolCards(lang)}</div>`
     : `<div class="panel paywall"><h2>${paywallOn() ? ic.lock : ''}${esc(d.paid_h)}</h2><ul class="mini"><li>${ic.check}<span>${esc(d.ua_locked)}</span></li><li>${ic.check}<span>${esc(d.go_pdf)}</span></li></ul><a class="btn primary wide" href="${href}">${cta}</a></div>${waitlistBox(lang)}`;
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
