@@ -35,7 +35,7 @@ const carSvg = (cls = 'carsvg') => `<svg class="${cls}" viewBox="0 0 560 250" ${
 // нейтральный силуэт для случаев, когда фото модели нет или оно не подходит по году
 const silhouette = `<svg viewBox="0 0 560 250" class="sil" ${A}><path d="M36 170c0-20 18-30 52-36l62-8c22-30 52-48 98-50h98c42 2 70 24 92 52l46 8c22 4 36 18 36 40v18c0 8-6 14-14 14H48c-8 0-12-6-12-14z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><path d="M166 128c22-26 46-38 90-40h54v40zm164-40h20c32 2 56 18 74 40H330z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="140" cy="198" r="34" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="432" cy="198" r="34" fill="none" stroke="currentColor" stroke-width="5"/></svg>`;
 const featIcons = ['M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6zM9 12l2 2 4-4', 'M4 19V9m5 10V5m5 14v-8m5 8V7', 'M4 7h16M4 12h16M4 17h10', 'M12 3l9 16H3zM12 10v4M12 17v.5', 'M7 7h10M7 12h10M7 17h6M4 4v16h16', 'M5 19a8 8 0 1 1 14 0M12 13l4-5'];
-const plateEl = (p, sm = false) => `<span class="plate${sm ? ' sm' : ''}"><i ${A}>UA</i><span>${esc(p)}</span></span>`;
+const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : ''}"><i ${A}>${cc}</i><span>${esc(p)}</span></span>`;
 
 // ---------- каркас страницы ----------
 export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '' }) {
@@ -294,17 +294,6 @@ function safetyBlock(lang, r, full) {
   return `<section class="panel" aria-labelledby="h-safe"><h2 id="h-safe">${esc(d.safety_h)}</h2><h3>${esc(d.recalls_h)}</h3>${recHtml}<h3>${esc(d.comp_h)}</h3>${compHtml}${rateHtml ? `<h3>${esc(d.rate_h)}</h3>${rateHtml}` : ''}</section>`;
 }
 
-function extrasBlock(lang, r) {
-  const d = dict(lang);
-  const us = r.region === 'US' || r.region === 'CA' || r.decoded?.trusted;
-  const items = [
-    ['https://policy.mtsbu.ua/', d.x_osago, d.x_osago_p],
-    ['https://mtsbu.ua/services/otrimannya-dovidki-pro-strahovu-istoriyu', d.x_hist, d.x_hist_p],
-    ...(us ? [['https://www.nicb.org/vincheck', d.x_nicb, d.x_nicb_p], ['https://www.vehiclehistory.gov/', d.x_nmvtis, d.x_nmvtis_p]] : []),
-  ];
-  return `<section class="panel" aria-labelledby="h-extra"><h2 id="h-extra">${esc(d.extra_h)}</h2><ul class="srclist">${items.map(([u, a, b]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer"><b>${esc(a)}</b><span class="sr-only"> ${esc(d.ext_new_tab)}</span></a><span>${esc(b)}</span></li>`).join('')}</ul><p class="muted sm">${esc(d.extra_note)}</p></section>`;
-}
-
 function usaBlock(lang, r) {
   const d = dict(lang); const u = r.usa;
   const head = `<h2 id="h-usa">${esc(d.usa_h)}</h2>`;
@@ -316,7 +305,7 @@ function usaBlock(lang, r) {
   const item = (k, v) => `<div><span>${esc(k)}</span><b>${v}</b></div>`;
   const stats = sm ? `<div class="stats">${item(d.usa_sum_count, sm.count)}${item(d.usa_sum_first, esc(sm.first))}${item(d.usa_sum_last, esc(sm.last))}${item(d.usa_sum_price, sm.minPrice && sm.minPrice !== sm.maxPrice ? `${money(sm.minPrice)} – ${money(sm.maxPrice)}` : money(sm.lastPrice))}${sm.maxMiles ? item(d.usa_sum_miles, Number(sm.maxMiles).toLocaleString(loc)) : ''}${item(d.usa_sum_sellers, sm.sellers)}${sm.states.length ? item(d.usa_sum_states, esc(sm.states.slice(0, 6).join(', '))) : ''}</div>` : '';
   const roll = sm?.rollback ? `<div class="notice bad">${ic.warn}<div>${esc(fmt(d.usa_rollback, { from: Number(sm.rollback.from.m).toLocaleString(loc), to: Number(sm.rollback.to.m).toLocaleString(loc), d1: sm.rollback.from.d, d2: sm.rollback.to.d }))}</div></div>` : '';
-  const row = (l) => `<tr><td data-l="${esc(d.usa_col_date)}">${esc(l.firstSeen)}</td><td data-l="${esc(d.usa_col_price)}">${money(l.price)}</td><td data-l="${esc(d.usa_col_miles)}">${l.miles ? Number(l.miles).toLocaleString(loc) : '—'}</td><td data-l="${esc(d.usa_col_seller)}">${esc(l.seller || '—')}</td><td data-l="${esc(d.usa_col_state)}">${esc(l.state)}</td><td data-l="${esc(d.usa_col_src)}">${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer nofollow">${esc(l.source || d.usa_link)}<span class="sr-only"> ${esc(d.ext_new_tab)}</span></a>` : esc(l.source)}</td></tr>`;
+  const row = (l) => `<tr><td data-l="${esc(d.usa_col_date)}">${esc(l.firstSeen)}</td><td data-l="${esc(d.usa_col_price)}">${money(l.price)}</td><td data-l="${esc(d.usa_col_miles)}">${l.miles ? Number(l.miles).toLocaleString(loc) : '—'}</td><td data-l="${esc(d.usa_col_seller)}">${esc(l.seller || '—')}</td><td data-l="${esc(d.usa_col_state)}">${esc(l.state)}</td><td data-l="${esc(d.usa_col_src)}">${esc(l.source)}</td></tr>`;
   const th = ['usa_col_date', 'usa_col_price', 'usa_col_miles', 'usa_col_seller', 'usa_col_state', 'usa_col_src'].map((k) => `<th scope="col">${esc(d[k])}</th>`).join('');
   const table = (rows) => `<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_tbl)}"><table class="tl"><caption class="sr-only">${esc(d.usa_tbl)}</caption><thead><tr>${th}</tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
   const L = u.listings || [];
@@ -325,6 +314,33 @@ function usaBlock(lang, r) {
   const aucHtml = A.length ? `<h3>${esc(d.usa_auc_h)}</h3><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_auc_h)}"><table class="tl"><thead><tr>${['auc_house', 'usa_col_date', 'auc_lot', 'auc_dmg', 'auc_repair', 'auc_bid', 'auc_keys', 'auc_runs', 'auc_photos'].map((k) => `<th scope="col">${esc(d[k])}</th>`).join('')}</tr></thead><tbody>${A.map((x) => `<tr><td data-l="${esc(d.auc_house)}">${esc(x.house)}</td><td data-l="${esc(d.usa_col_date)}">${esc(String(x.date || '').slice(0, 10))}</td><td data-l="${esc(d.auc_lot)}">${esc(x.lot)}</td><td data-l="${esc(d.auc_dmg)}">${esc([x.primaryDamage, x.secondaryDamage].filter(Boolean).join(' / '))}</td><td data-l="${esc(d.auc_repair)}">${money(x.estRepairUsd)}</td><td data-l="${esc(d.auc_bid)}">${money(x.finalBidUsd)}</td><td data-l="${esc(d.auc_keys)}">${x.keys == null ? '—' : esc(x.keys ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_runs)}">${x.runsDrives == null ? '—' : esc(x.runsDrives ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_photos)}">${esc(x.photos ?? '—')}</td></tr>`).join('')}</tbody></table></div>` : '';
   return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(fmt(d.usa_src, { p: (u.providers || []).join(', ') }))}</p></section>`;
 }
+
+// «Паспорт авто»: все известное о машине из реестра, декодера и локальной расшифровки в одной сетке
+function passportBlock(lang, r) {
+  const d = dict(lang); const x = r.decoded, us = r.ua.summary, v = us?.vehicle || {}, l = r.local;
+  const cells = [];
+  const add = (k, val) => { if (val !== undefined && val !== null && val !== '' && val !== false) cells.push([k, val]); };
+  if (x?.found && x.trusted) {
+    add(d.dk_make, en(lang, x.make)); add(d.dk_model, en(lang, x.model)); add(d.dk_year, esc(x.year)); add(d.dk_trim, x.trim && en(lang, x.trim));
+    add(d.dk_body, x.body && tv(lang, x.body)); add(d.dk_drive, x.drive && tv(lang, x.drive)); add(d.dk_engine, x.engine && esc(engineText(lang, x.engine)));
+    add(d.dk_fuel, x.fuel && tv(lang, x.fuel)); add(d.dk_trans, x.transmission && tv(lang, x.transmission)); add(d.dk_plant, x.plant && en(lang, x.plant));
+  } else if (v.brand) {
+    add(d.dk_make, esc(nice(v.brand))); add(d.dk_model, v.model && esc(nice(v.model))); add(d.dk_year, esc(v.year));
+    add(d.dk_body, v.body && esc(rv(lang, v.body))); add(d.dk_fuel, v.fuel && esc(rv(lang, v.fuel))); add(d.dk_engine, v.cap && esc(`${v.cap} ${d.cm3}`));
+  } else if (l) {
+    add(d.local_make, esc(l.make)); add(d.local_model, l.model && esc(l.model)); add(d.local_year, l.years.length && esc(l.years.join(' / ')));
+  } else if (x?.found) {
+    add(d.dk_make, x.make && en(lang, x.make)); add(d.dk_plant, x.plant && en(lang, x.plant));
+  }
+  if (v.color) add(d.w_color, esc(rv(lang, v.color)));
+  if (us) { add(d.ua_imported, us.imported && esc(us.imported.date)); add(d.ua_first, esc(us.first)); add(d.ua_owners, esc(us.owners)); }
+  add(d.w_vin, `<span class="mono">${esc(r.vin)}</span>`);
+  const mm = r.mismatch.length ? `<div class="notice bad">${ic.warn}<div><b>${esc(d.mm_h)}</b>${r.mismatch.map((m) => `<div>${esc(fmt(d['mm_' + m.field], { vin: m.vin, registry: m.registry }))}</div>`).join('')}</div></div>` : '';
+  const note = l ? `<div class="notice info">${esc(d.local_note)}</div>` : x?.found && !x.trusted && !v.brand ? `<div class="notice info">${esc(d.decode_partial)}</div>` : '';
+  const empty = cells.length <= 1 ? `<p class="muted">${esc(x?.unavailable ? d.decode_unavail : d.decode_none)}</p>` : '';
+  return `<section class="panel" aria-labelledby="h-pass"><h2 id="h-pass">${esc(d.pass_h)}</h2>${mm}${note}<dl class="spec-grid">${cells.map(([k, val]) => `<div><dt>${esc(k)}</dt><dd>${val}</dd></div>`).join('')}</dl>${empty}</section>`;
+}
+const grp = (n, id, title) => `<div class="grp" id="${id}"><span class="n" ${A}>${n}</span><span>${esc(title)}</span></div>`;
 
 // ---------- шапка результата ----------
 const vehicleTitle = (r, fallback) => {
@@ -337,7 +353,7 @@ const vehicleTitle = (r, fallback) => {
 function photoFigure(lang, r) {
   const d = dict(lang); const ph = r.photo;
   if (!ph && !r.vehicle?.make) return ''; // марка неизвестна: показывать нечего
-  return `<figure class="photo${ph ? '' : ' nophoto'}"><div class="ph">${ph ? `<img src="${esc(ph.url)}" alt="${esc(vehicleTitle(r, ''))}" width="960" height="600" decoding="async" fetchpriority="high">` : ''}<div class="fallback">${silhouette}</div></div>${ph ? `<figcaption>${esc(d.photo_cap)} · <a href="${esc(ph.page)}" target="_blank" rel="noopener noreferrer">${esc(d.photo_src)}<span class="sr-only"> ${esc(d.ext_new_tab)}</span></a></figcaption>` : ''}</figure>`;
+  return `<figure class="photo${ph ? '' : ' nophoto'}"><div class="ph">${ph ? `<img src="${esc(ph.url)}" alt="${esc(vehicleTitle(r, ''))}" width="960" height="600" decoding="async" fetchpriority="high">` : ''}<div class="fallback">${silhouette}</div></div>${ph ? `<figcaption>${esc(d.photo_cap)} · ${esc(d.photo_src)}</figcaption>` : ''}</figure>`;
 }
 function specChips(lang, r) {
   const x = r.decoded; const v = r.ua?.summary?.vehicle || {}; const d = dict(lang);
@@ -395,11 +411,15 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const hit = r.wanted.length > 0;
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
+  const usa = r.usa && (r.usa.queried || r.usa.capped || r.usa.cached) ? usaBlock(lang, r) : '';
+  const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ['g-safe', d.g_safe], ['g-next', d.g_next]];
+  const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}${extrasBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', 2) + usa : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
+  const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
-    ? `${actionsBlock(lang)}${waitlistBox(lang)}`
+    ? `${toc}${actionsBlock(lang)}${waitlistBox(lang)}`
     : `<div class="panel paywall"><h2>${paywallOn() ? ic.lock : ''}${esc(d.paid_h)}</h2><ul class="mini"><li>${ic.check}<span>${esc(d.ua_locked)}</span></li><li>${ic.check}<span>${esc(d.go_pdf)}</span></li></ul><a class="btn primary wide" href="${href}">${cta}</a></div>${waitlistBox(lang)}`;
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
@@ -439,6 +459,12 @@ const RDW_T = {
   ru: { h: 'Нидерланды (RDW)', eyebrow: 'Реестр RDW, Нидерланды', sub: 'Открытые данные дорожной службы Нидерландов. VIN в открытых данных нет.', first: 'Первая регистрация', firstNl: 'Первая регистрация в Нидерландах', owner: 'Последняя смена владельца', apk: 'Техосмотр (APK) действует до', insured: 'Страхование (WAM)', yes: 'Да', no: 'Нет', exported: 'Отметка «экспорт»', recall: 'Отзыв без ремонта', odo: 'Оценка пробега', odoOk: 'Логичный', odoBad: 'Нелогичный (возможна скрутка)', price: 'Каталожная цена', engine: 'Двигатель', color: 'Цвет', kind: 'Тип', na: 'нет данных', note: 'Пробег RDW не публикует — только вывод о его логичности.', flagExp: 'Авто помечено как экспортированное из Нидерландов — проверьте, остаётся ли оно на нидерландских номерах.', ukNone: 'В реестрах Украины по этому номеру записей нет.' },
   en: { h: 'Netherlands (RDW)', eyebrow: 'RDW register, Netherlands', sub: 'Open data of the Dutch vehicle authority. Open data does not include the VIN.', first: 'First registration', firstNl: 'First registered in the Netherlands', owner: 'Last owner change', apk: 'MOT (APK) valid until', insured: 'Insurance (WAM)', yes: 'Yes', no: 'No', exported: 'Export flag', recall: 'Unrepaired recall', odo: 'Odometer verdict', odoOk: 'Logical', odoBad: 'Illogical (possible rollback)', price: 'List price', engine: 'Engine', color: 'Colour', kind: 'Type', na: 'no data', note: 'RDW does not publish the odometer reading, only a plausibility verdict.', flagExp: 'The car is flagged as exported from the Netherlands. Check whether it still carries Dutch plates.', ukNone: 'No records for this plate in the Ukrainian registers.' },
 };
+const NLW = {
+  uk: { personenauto: 'Легковий автомобіль', bedrijfsauto: 'Комерційний автомобіль', motorfiets: 'Мотоцикл', bromfiets: 'Moped', aanhangwagen: 'Причіп', bus: 'Автобус', zwart: 'Чорний', wit: 'Білий', grijs: 'Сірий', blauw: 'Синій', rood: 'Червоний', groen: 'Зелений', geel: 'Жовтий', bruin: 'Коричневий', oranje: 'Помаранчевий', beige: 'Бежевий', paars: 'Фіолетовий', zilver: 'Сріблястий', benzine: 'Бензин', diesel: 'Дизель', elektriciteit: 'Електро', lpg: 'Газ (LPG)', cng: 'Газ (CNG)', waterstof: 'Водень', hatchback: 'Хетчбек', sedan: 'Седан', stationwagen: 'Універсал', mpv: 'Мінівен', coupe: 'Купе', cabriolet: 'Кабріолет' },
+  ru: { personenauto: 'Легковой автомобиль', bedrijfsauto: 'Коммерческий автомобиль', motorfiets: 'Мотоцикл', bromfiets: 'Мопед', aanhangwagen: 'Прицеп', bus: 'Автобус', zwart: 'Чёрный', wit: 'Белый', grijs: 'Серый', blauw: 'Синий', rood: 'Красный', groen: 'Зелёный', geel: 'Жёлтый', bruin: 'Коричневый', oranje: 'Оранжевый', beige: 'Бежевый', paars: 'Фиолетовый', zilver: 'Серебристый', benzine: 'Бензин', diesel: 'Дизель', elektriciteit: 'Электро', lpg: 'Газ (LPG)', cng: 'Газ (CNG)', waterstof: 'Водород', hatchback: 'Хетчбэк', sedan: 'Седан', stationwagen: 'Универсал', mpv: 'Минивэн', coupe: 'Купе', cabriolet: 'Кабриолет' },
+  en: { personenauto: 'Passenger car', bedrijfsauto: 'Commercial vehicle', motorfiets: 'Motorcycle', bromfiets: 'Moped', aanhangwagen: 'Trailer', bus: 'Bus', zwart: 'Black', wit: 'White', grijs: 'Grey', blauw: 'Blue', rood: 'Red', groen: 'Green', geel: 'Yellow', bruin: 'Brown', oranje: 'Orange', beige: 'Beige', paars: 'Purple', zilver: 'Silver', benzine: 'Petrol', elektriciteit: 'Electric', waterstof: 'Hydrogen', stationwagen: 'Estate', cabriolet: 'Convertible' },
+};
+const nlw = (lang, x) => String(x || '').split(' / ').map((w) => NLW[lang][w.toLowerCase()] || nice(w)).join(' / ');
 export function rdwReport(req, lang, plate, v, wanted) {
   const d = dict(lang), t = RDW_T[lang];
   const yn = (b) => (b === null ? t.na : b ? t.yes : t.no);
@@ -448,16 +474,16 @@ export function rdwReport(req, lang, plate, v, wanted) {
     [t.first, v.firstAdmission], [t.firstNl, v.firstNl], [t.owner, v.registered], [t.apk, v.apkUntil],
     [t.insured, yn(v.insured)], [t.exported, yn(v.exported)], [t.recall, yn(v.openRecall)],
     [t.odo, v.odometerVerdict ? (bad ? t.odoBad : t.odoOk) + (v.odometerYear ? ` (${v.odometerYear})` : '') : t.na],
-    [t.price, v.listPrice ? `€${v.listPrice.toLocaleString('en')}` : ''], [t.kind, v.kind], [t.color, v.color],
-    [t.engine, [v.fuel, v.cc && `${v.cc} ${d.cm3}`, v.kw && `${v.kw} kW`].filter(Boolean).join(' · ')],
+    [t.price, v.listPrice ? `€${v.listPrice.toLocaleString('en')}` : ''], [t.kind, nlw(lang, v.kind)], [t.color, nlw(lang, v.color)],
+    [t.engine, [nlw(lang, v.fuel), v.cc && `${v.cc} ${d.cm3}`, v.kw && `${v.kw} kW`].filter(Boolean).join(' · ')],
   ].filter(([, x]) => x);
   const flags = [v.exported && t.flagExp, bad && t.odoBad].filter(Boolean);
   const hit = wanted.length > 0;
   const wantedHtml = hit ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p></section>` : '';
-  const main = `${wantedHtml}${flags.length ? `<div class="notice">${flags.map(esc).join('<br>')}</div>` : ''}<section class="panel"><h2>${esc(t.h)}</h2><dl class="kv">${rows.map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl><p class="muted sm">${esc(t.note)}</p></section>
+  const main = `${wantedHtml}${flags.length ? `<div class="notice">${flags.map(esc).join('<br>')}</div>` : ''}<section class="panel"><h2>${esc(t.h)}</h2><dl class="spec-grid">${rows.map(([k, x]) => `<div><dt>${esc(k)}</dt><dd>${esc(x)}</dd></div>`).join('')}</dl><p class="muted sm">${esc(t.note)}</p></section>
 <div class="notice info">${esc(t.ukNone)} ${esc(t.sub)}</div>${searchForm(lang, '', false, 'b')}`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a>
-<div class="vehicle solo"><div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate)}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
+<div class="vehicle solo"><div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate, false, 'NL')}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
 <section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${actionsBlock(lang)}</aside></div></section>`;
   return layout(req, lang, { title: `${plate} — ${t.h} | VINScope`, desc: t.sub, path: '/check', body, noindex: true });
 }

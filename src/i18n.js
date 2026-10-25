@@ -489,3 +489,7 @@ Object.assign(D.en, {
   x_nicb: 'NICB VINCheck (US)', x_nicb_p: 'Free: whether the car is reported stolen or salvaged by member insurers. Up to 5 checks per day per address.',
   x_nmvtis: 'NMVTIS (US)', x_nmvtis_p: 'The official US Department of Justice site listing approved providers of title, total-loss and odometer history.',
 });
+
+Object.assign(D.uk, { pass_h: 'Дані про автомобіль', g_pass: 'Паспорт авто', g_legal: 'Юридична чистота та історія в Україні', g_usa: 'Історія в США', g_safe: 'Безпека моделі', g_next: 'Висновок', toc_h: 'Зміст звіту' });
+Object.assign(D.ru, { pass_h: 'Данные об автомобиле', g_pass: 'Паспорт авто', g_legal: 'Юридическая чистота и история в Украине', g_usa: 'История в США', g_safe: 'Безопасность модели', g_next: 'Вывод', toc_h: 'Содержание отчёта' });
+Object.assign(D.en, { pass_h: 'Vehicle data', g_pass: 'Vehicle passport', g_legal: 'Legal status and Ukrainian history', g_usa: 'US history', g_safe: 'Model safety', g_next: 'Conclusion', toc_h: 'Report contents' });

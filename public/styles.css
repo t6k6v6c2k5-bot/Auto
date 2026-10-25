@@ -306,3 +306,18 @@ h1.platebig .plate{font-size:clamp(28px,5vw,44px);border-width:3px;border-radius
 .plateadd{display:flex;gap:10px;margin-top:6px}.plateadd input.mono{flex:1;min-width:0;font:600 17px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;padding:14px;border:1.5px solid var(--field);border-radius:12px;background:var(--surface);color:var(--ink)}
 .plateadd input:focus{outline:3px solid var(--blue);outline-offset:1px}
 @media(max-width:640px){.plateadd{flex-direction:column}}
+
+/* структура отчёта: паспорт авто, разделы, оглавление */
+.grp{display:flex;align-items:center;gap:12px;margin:34px 0 14px;font-weight:800;font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);scroll-margin-top:84px}
+.grp:first-child{margin-top:0}.grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.grp .n{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:13px;letter-spacing:0}
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0}
+.spec-grid>div{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.spec-grid dt{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}.spec-grid dd{margin:0;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.spec-grid .mono{font:700 14px ui-monospace,Menlo,monospace;letter-spacing:.03em}
+.toc ol{margin:0;padding:0;list-style:none;counter-reset:t}.toc li{counter-increment:t}
+.toc a{display:flex;gap:10px;align-items:center;padding:9px 4px;color:var(--ink-2);text-decoration:none;font-weight:600;font-size:14px;border-bottom:1px solid var(--line)}
+.toc li:last-child a{border-bottom:0}.toc a::before{content:counter(t);display:grid;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);font-size:12px}
+.toc a:hover{color:var(--blue)}
+@media print{.toc{display:none}}
+@media(max-width:640px){.spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.spec-grid dd{font-size:15px}}
