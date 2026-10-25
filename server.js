@@ -342,6 +342,7 @@ const server = createServer(async (req, res) => {
 
     const m = pathname.match(/^\/(uk|ru|en)(\/.*)?$/);
     if (m) {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return send(req, res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8', { allow: 'GET, HEAD' });
       // каноничные URL: без двойных и хвостовых слэшей, корень языка — /uk/
       let rest = (m[2] || '/').replace(/\/{2,}/g, '/');
       const clean = rest.length > 1 ? rest.replace(/\/$/, '') : rest;
