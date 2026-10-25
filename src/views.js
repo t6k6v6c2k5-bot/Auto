@@ -347,6 +347,7 @@ function passportBlock(lang, r) {
   }
   if (v.color) add(d.w_color, esc(rv(lang, v.color)));
   if (us) { add(d.ua_imported, us.imported && esc(us.imported.date)); add(d.ua_first, esc(us.first)); add(d.ua_owners, esc(us.owners)); }
+  add(d.pass_checks, r.checks >= 2 && esc(fmt(d.pass_checks_v, { n: r.checks })));
   add(d.w_vin, `<span class="mono">${esc(r.vin)}</span>`);
   const mm = r.mismatch.length ? `<div class="notice bad">${ic.warn}<div><b>${esc(d.mm_h)}</b>${r.mismatch.map((m) => `<div>${esc(fmt(d['mm_' + m.field], { vin: m.vin, registry: m.registry }))}</div>`).join('')}</div></div>` : '';
   const note = l ? `<div class="notice info">${esc(d.local_note)}</div>` : x?.found && !x.trusted && !v.brand ? `<div class="notice info">${esc(d.decode_partial)}</div>` : '';

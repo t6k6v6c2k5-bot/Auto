@@ -51,7 +51,13 @@ export const purgeOld = () => {
   db.prepare("DELETE FROM orders WHERE status='pending' AND created_at<?").run(Date.now() - 7 * 864e5); // неоплаченные заказы с email
   return db.prepare('DELETE FROM searches WHERE created_at<?').run(Date.now() - 90 * 864e5).changes;
 };
-export const logSearch = (vin, lang) => db.prepare('INSERT INTO searches(vin,lang,created_at) VALUES(?,?,?)').run(vin, lang, Date.now());
+// повторный запрос того же VIN в течение 10 минут (обновление страницы) не считаем отдельной проверкой
+export const logSearch = (vin, lang) => {
+  const last = db.prepare('SELECT MAX(created_at) t FROM searches WHERE vin=?').get(vin)?.t || 0;
+  if (Date.now() - last < 600e3) return;
+  db.prepare('INSERT INTO searches(vin,lang,created_at) VALUES(?,?,?)').run(vin, lang, Date.now());
+};
+export const searchCount = (vin, days = 30) => db.prepare('SELECT COUNT(*) c FROM searches WHERE vin=? AND created_at>?').get(vin, Date.now() - days * 864e5).c;
 export const stats = () => ({
   paid: db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(amount),0) s FROM orders WHERE status IN ('paid','credit') AND stripe_session IS NOT NULL`).get(),
   byStatus: db.prepare('SELECT status, COUNT(*) c FROM orders GROUP BY status').all(),

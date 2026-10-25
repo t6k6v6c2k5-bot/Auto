@@ -1,4 +1,5 @@
 // Сборка отчёта по VIN из реальных открытых источников.
+import { searchCount } from './db.js';
 import { fuelEconomy } from './fueleco.js';
 import { canadaRecalls } from './canada.js';
 import { decodeVin, recalls as getRecalls, complaints as getComplaints, ratings as getRatings } from './nhtsa.js';
@@ -68,7 +69,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   }
   return {
     vin, region, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }
