@@ -321,3 +321,5 @@ h1.platebig .plate{font-size:clamp(28px,5vw,44px);border-width:3px;border-radius
 .toc a:hover{color:var(--blue)}
 @media print{.toc{display:none}}
 @media(max-width:640px){.spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.spec-grid dd{font-size:15px}}
+.recent{align-items:center}.recent-l{font-size:13px;color:#a9bddf;margin-right:2px}.sec .recent-l{color:var(--muted)}
+.herostats{align-items:start}@media(max-width:640px){.herostats div:last-child b{font-size:22px;letter-spacing:-.03em}}

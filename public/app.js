@@ -66,7 +66,10 @@
     update(false);
     const rec = $('.recent', form);
     const EX = ['1HGCM82633A004352', 'AA1234BB'];
-    if (rec) getRecent().filter((x) => !EX.includes(x)).forEach((x) => { const a = document.createElement('a'); a.href = `/${lang}/check?q=${encodeURIComponent(x)}`; a.textContent = x; a.addEventListener('click', () => setBusy(true)); rec.appendChild(a); });
+    const LBL = { uk: 'Ви шукали:', ru: 'Вы искали:', en: 'Recent:' };
+    const prev = getRecent().filter((x) => !EX.includes(x));
+    if (rec && prev.length) { const l = document.createElement('span'); l.className = 'recent-l'; l.textContent = LBL[lang] || LBL.en; rec.appendChild(l); }
+    if (rec) prev.forEach((x) => { const a = document.createElement('a'); a.href = `/${lang}/check?q=${encodeURIComponent(x)}`; a.textContent = x; a.addEventListener('click', () => setBusy(true)); rec.appendChild(a); });
   });
 
   // ---------- Лист ожидания ----------
