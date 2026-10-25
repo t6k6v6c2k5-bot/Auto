@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { cfg, PLANS, paywallOn, price, CURRENCY, payProvider } from './src/config.js';
 import * as mono from './src/mono.js';
+import * as lemon from './src/lemon.js';
 import { LANGS, dict } from './src/i18n.js';
 import { validateVin } from './src/vin.js';
 import { normalizePlate, looksLikePlate } from './src/plate.js';
@@ -52,7 +53,7 @@ async function doFulfil(orderId) {
   if (!report.found) {
     // Ноу-хау: автовозврат, если по VIN нет данных ни в одном источнике
     let refunded = !o.payment_intent; // у заказов по коду пакета возвращать в Stripe нечего
-    if (o.payment_intent) { try { await (o.payment_intent.startsWith('pi_') ? stripe.refund(o.payment_intent) : mono.cancel(o.payment_intent)); refunded = true; } catch (e) { console.error('REFUND FAILED for order', o.id, e.message); } }
+    if (o.payment_intent) { try { await (o.payment_intent.startsWith('pi_') ? stripe.refund(o.payment_intent) : o.payment_intent.startsWith('ls_') ? lemon.refund(o.payment_intent.slice(3)) : mono.cancel(o.payment_intent)); refunded = true; } catch (e) { console.error('REFUND FAILED for order', o.id, e.message); } }
     if (o.status === 'credit' && o.credit_code) store.returnCredit(o.credit_code);
     store.updateOrder(o.id, { status: refunded ? 'refunded' : 'refund_failed' }); // refund_failed виден в /admin: вернуть вручную
     return store.getOrder(o.id);
@@ -98,6 +99,11 @@ async function api(req, res, url) {
     const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: plan.amount, lang });
     try {
       const d = dict(lang).plans[b.plan];
+      if (payProvider() === 'lemon') {
+        const c = await lemon.createCheckout({ order: o, name: `VINScope — ${d[0]}, VIN ${v.vin}`, redirectUrl: `${origin(req)}/${lang}/success?o=${o.id}&s=${o.secret}` });
+        store.updateOrder(o.id, { stripe_session: `ls:${c.cents}` }); // ожидаемая сумма в валюте магазина
+        return json(req, res, 200, { url: c.url });
+      }
       if (payProvider() === 'mono') {
         const inv = await mono.createInvoice({
           order: o, destination: `VINScope — ${d[0]}, VIN ${v.vin}`,
@@ -219,14 +225,16 @@ async function page(req, res, url, lang, rest) {
     const vin = (url.searchParams.get('vin') || '').toUpperCase().slice(0, 23);
     if (!paywallOn()) return redirect(res, vin ? `/${lang}/check?q=${encodeURIComponent(vin)}` : `/${lang}/`);
     const plan = PLANS[url.searchParams.get('plan')] ? url.searchParams.get('plan') : 'single';
-    return priv(V.checkoutPage(req, lang, { plan, vin }));
+    let fx = null; // Lemon Squeezy берёт оплату в валюте магазина: показываем сумму заранее
+    if (payProvider() === 'lemon' && cfg.lemonCurrency !== 'UAH') { try { fx = { cur: cfg.lemonCurrency, cents: await lemon.chargeCents(PLANS[plan].amount) }; } catch { /* курс недоступен */ } }
+    return priv(V.checkoutPage(req, lang, { plan, vin, fx }));
   }
   if (rest === '/success') {
     const o = store.getOrder(url.searchParams.get('o') || '');
     const sec = url.searchParams.get('s') || '';
     if (!o || !o.success_secret || sec.length !== o.success_secret.length || !timingSafeEqual(Buffer.from(sec), Buffer.from(o.success_secret))) return redirect(res, `/${lang}/`);
     try {
-      if (o.stripe_session && !o.report && o.status === 'pending' && !o.stripe_session.startsWith('cs_')) {
+      if (o.stripe_session?.startsWith('ls:')) { /* Lemon Squeezy: оплату подтверждает вебхук */ } else if (o.stripe_session && !o.report && o.status === 'pending' && !o.stripe_session.startsWith('cs_')) {
         const st = await mono.invoiceStatus(o.stripe_session); // вебхук может прийти позже — проверяем статус сами
         if (mono.isPaid(st, o) && store.claimPaid(o.id, st.invoiceId || o.stripe_session)) await fulfil(o.id);
       } else if (o.stripe_session && !o.report && o.status === 'pending') {
@@ -299,6 +307,17 @@ const server = createServer(async (req, res) => {
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
+    if (pathname === '/webhook/lemon' && req.method === 'POST') {
+      const raw = await readBody(req, 1e6);
+      if (!lemon.verifyWebhook(raw, req.headers['x-signature'])) return send(req, res, 400, 'bad signature', 'text/plain');
+      const ev = JSON.parse(raw);
+      const id = ev?.meta?.custom_data?.order_id;
+      const o = id ? store.getOrder(id) : null;
+      const expect = Number(String(o?.stripe_session || '').replace(/^ls:/, '')) || Infinity;
+      const p = o && lemon.paidOrder(ev, expect);
+      if (p && p.orderId === o.id && store.claimPaid(o.id, 'ls_' + p.lemonId)) await fulfil(o.id);
+      return send(req, res, 200, 'ok', 'text/plain');
+    }
     if (pathname === '/webhook/mono' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);
       if (!cfg.monoToken || !(await mono.verifyWebhook(raw, req.headers['x-sign']))) return send(req, res, 400, 'bad signature', 'text/plain');

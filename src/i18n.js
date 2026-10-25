@@ -626,3 +626,6 @@ for (const [l, sec, t3] of [
   ['ru', 'Оплата картой, Apple Pay или Google Pay на защищённой странице банка. Мы не видим данных вашей карты.', 'Мы храним запросы (VIN или номер, язык, дату) до 90 дней, email — только если вы его указали (для письма о запуске или заказа), и технические данные для защиты от злоупотреблений. Оплату принимает банк-эквайер (monobank), данные карты нам недоступны.'],
   ['en', 'Pay by card, Apple Pay or Google Pay on the bank’s secure page. We never see your card details.', 'We keep queries (VIN or plate, language, date) for up to 90 days, your email only if you provide it (for the launch email or your order), and technical data to prevent abuse. Payments are processed by the acquiring bank (monobank); we have no access to card details.'],
 ]) { D[l].co_secure = sec; D[l].terms[3] = t3; }
+Object.assign(D.uk, { co_fx: 'Оплата пройде у валюті платіжного сервісу: ≈ {sum} за курсом НБУ (банк може додати комісію за конвертацію).' });
+Object.assign(D.ru, { co_fx: 'Оплата пройдёт в валюте платёжного сервиса: ≈ {sum} по курсу НБУ (банк может добавить комиссию за конвертацию).' });
+Object.assign(D.en, { co_fx: 'You will be charged in the payment provider’s currency: ≈ {sum} at the NBU rate (your bank may add a conversion fee).' });

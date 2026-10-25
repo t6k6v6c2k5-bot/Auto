@@ -7,7 +7,10 @@ export const cfg = {
   registryToYear: Number(process.env.REGISTRY_TO_YEAR) || 0,          // для тестов: ограничить годы и пропустить текущий CSV
   registryMaxGB: Number(process.env.REGISTRY_MAX_GB) || 3.5,
   stripeKey: process.env.STRIPE_SECRET_KEY || '',
-  monoToken: process.env.MONO_TOKEN || '',                      // Monobank Acquiring (X-Token из web.monobank.ua или тестовый с api.monobank.ua)
+  monoToken: process.env.MONO_TOKEN || '',
+  lemonKey: process.env.LEMON_API_KEY || '',                    // Lemon Squeezy (работает без ФОП): ключ API, магазин, вариант товара, секрет вебхука
+  lemonStore: process.env.LEMON_STORE_ID || '', lemonVariant: process.env.LEMON_VARIANT_ID || '', lemonSecret: process.env.LEMON_SIGNING_SECRET || '',
+  lemonCurrency: (process.env.LEMON_CURRENCY || 'USD').toUpperCase(),                      // Monobank Acquiring (X-Token из web.monobank.ua или тестовый с api.monobank.ua)
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
   marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
@@ -30,8 +33,10 @@ export const cfg = {
   plausible: process.env.PLAUSIBLE_DOMAIN || '',
 };
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.
-export const paywallOn = () => Boolean(cfg.monoToken || cfg.stripeKey);
-export const payProvider = () => (cfg.monoToken ? 'mono' : cfg.stripeKey ? 'stripe' : '');
+const lemonReady = () => Boolean(cfg.lemonKey && cfg.lemonStore && cfg.lemonVariant && cfg.lemonSecret);
+// приоритет: monobank (когда будет ФОП) → Lemon Squeezy (без ФОП) → Stripe
+export const payProvider = () => (cfg.monoToken ? 'mono' : lemonReady() ? 'lemon' : cfg.stripeKey ? 'stripe' : '');
+export const paywallOn = () => Boolean(payProvider());
 
 // цены в копейках гривны (Stripe: currency uah)
 export const CURRENCY = 'uah';

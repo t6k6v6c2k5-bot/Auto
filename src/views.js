@@ -570,7 +570,7 @@ export function plateNotFound(req, lang, plate, cov, wanted) {
   return layout(req, lang, { title: `${plate} — ${d.res_h} | VINScope`, desc: d.not_found_plate, path: '/check', body, noindex: true });
 }
 
-export function checkoutPage(req, lang, { plan, vin }) {
+export function checkoutPage(req, lang, { plan, vin, fx = null }) {
   const d = dict(lang);
   const p = PLANS[plan]; const [name, desc] = d.plans[plan];
   const body = `<section class="sec"><div class="wrap narrow"><h1>${esc(d.co_h)}</h1>
@@ -581,7 +581,7 @@ export function checkoutPage(req, lang, { plan, vin }) {
 <label>${esc(d.code_ph)}<input name="code" placeholder="VS-XXXXXXXXXX-XXXXXX" autocomplete="off" autocapitalize="characters" class="mono"></label>
 <p class="err" id="coerr" role="alert"></p>
 <button class="btn primary wide" type="submit">${esc(`${d.co_pay} · ${price(p.amount)}`)}</button>
-<p class="muted sm">${ic.lock}${esc(d.co_secure)}</p></form></div></div></section>`;
+${fx ? `<p class="muted sm">${esc(fmt(d.co_fx, { sum: `${(fx.cents / 100).toFixed(2)} ${fx.cur}` }))}</p>` : ''}<p class="muted sm">${ic.lock}${esc(d.co_secure)}</p></form></div></div></section>`;
   return layout(req, lang, { title: d.co_h + ' — VINScope', desc: d.co_h, path: '/checkout', body, noindex: true });
 }
 

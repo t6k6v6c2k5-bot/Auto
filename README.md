@@ -29,6 +29,7 @@
 | `OPERATOR_NAME`, `OPERATOR_DETAILS` | ФОП/ТОВ, ЄДРПОУ, адрес — в оферту и футер (нужны до приёма платежей) |
 | `ADMIN_KEY` | пароль для `/admin` (HTTP Basic, любое имя пользователя), минимум 16 символов |
 | `MONO_TOKEN` | **Оплата через monobank (основная):** X-Token из web.monobank.ua (бизнес-кабинет) или тестовый с api.monobank.ua. Вебхук: `POST /webhook/mono` (адрес передаётся в счёте автоматически, подпись ECDSA проверяется). Автовозврат — отмена оплаты |
+| `LEMON_API_KEY`, `LEMON_STORE_ID`, `LEMON_VARIANT_ID`, `LEMON_SIGNING_SECRET`, `LEMON_CURRENCY` (USD) | **Оплата без ФОП (временно):** Lemon Squeezy продаёт от своего имени (Merchant of Record), выплаты через PayPal. Цена 99 ₴ пересчитывается в валюту магазина по курсу НБУ. Вебхук: `POST /webhook/lemon`, событие `order_created`. Когда задан `MONO_TOKEN`, используется monobank |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | альтернатива: оплата через Stripe (используется, если `MONO_TOKEN` не задан) |
 | `MARKETCHECK_API_KEY` | **США и Канада:** история онлайн-объявлений по VIN (цены, пробег, дилеры, даты) через MarketCheck, около $0,006 за запрос. Включает детектор скрутки пробега. Ответы кэшируются 7 суток (пустые — сутки) |
 | `APIBARA_API_KEY` | **Аукционы США (Copart/IAAI):** лоты по VIN, повреждения, цена продажи, оценка стоимости, пробег, фото лота (отдаются через `/api/lotimg`). Бесплатный тариф Test: 100 запросов в месяц, без карты (apibara.tech). Ответы кэшируются 7 суток |

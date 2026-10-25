@@ -65,3 +65,17 @@ test('monobank: подпись вебхука (ECDSA) и проверка опл
   assert.ok(!isPaid({ ...JSON.parse(body), amount: 100 }, { id: 'o1', amount: 9900 }));
   assert.ok(!isPaid({ ...JSON.parse(body), status: 'processing' }, { id: 'o1', amount: 9900 }));
 });
+
+test('Lemon Squeezy: подпись вебхука и проверка оплаты', async () => {
+  const { createHmac } = await import('node:crypto');
+  const { cfg } = await import('../src/config.js');
+  const lemon = await import('../src/lemon.js');
+  cfg.lemonSecret = 'whsec'; cfg.lemonCurrency = 'USD';
+  const ev = { meta: { event_name: 'order_created', custom_data: { order_id: 'o1' } }, data: { id: 42, attributes: { status: 'paid', currency: 'USD', subtotal: 240, total: 240 } } };
+  const raw = JSON.stringify(ev); const sig = createHmac('sha256', 'whsec').update(raw).digest('hex');
+  assert.ok(lemon.verifyWebhook(raw, sig)); assert.ok(!lemon.verifyWebhook(raw, sig.replace(/.$/, '0')));
+  assert.deepEqual(lemon.paidOrder(ev, 240), { orderId: 'o1', lemonId: '42' });
+  assert.equal(lemon.paidOrder(ev, 300), null); // заплатили меньше выставленного
+  assert.equal(lemon.paidOrder({ ...ev, data: { ...ev.data, attributes: { ...ev.data.attributes, status: 'pending' } } }, 240), null);
+  cfg.lemonSecret = '';
+});
