@@ -80,3 +80,20 @@ test('RDW: форматы нидерландских номеров', async () =
   const n = normalizeRdw({ kenteken: 'GJ123B', merk: 'PEUGEOT', datum_eerste_toelating: '20150529', wam_verzekerd: 'Ja', export_indicator: 'Nee' }, [{ brandstof_omschrijving: 'Benzine', nettomaximumvermogen: '60' }]);
   assert.equal(n.firstAdmission, '2015-05-29'); assert.equal(n.insured, true); assert.equal(n.exported, false); assert.equal(n.kw, 60);
 });
+
+test('fueleconomy: подбор комплектации и перевод единиц', async () => {
+  const { pickOptions, parseOption, l100, gpkm } = await import('../src/fueleco.js');
+  assert.deepEqual(parseOption('Auto 5-spd, 6 cyl, 3.0 L'), { auto: true, cyl: 6, displ: 3 });
+  const opts = [{ text: 'Auto 5-spd, 4 cyl, 2.4 L', value: '1' }, { text: 'Auto 5-spd, 6 cyl, 3.0 L', value: '2' }, { text: 'Man 6-spd, 6 cyl, 3.0 L', value: '3' }];
+  assert.deepEqual(pickOptions(opts, { engine: '3.0L · 6 cyl', transmission: 'Automatic' }).map((o) => o.value), ['2']);
+  assert.equal(pickOptions(opts, { engine: '', transmission: '' }).length, 3);
+  assert.equal(l100(25), 9.4); assert.equal(gpkm(355.48), 221);
+});
+
+test('Transport Canada: разбор описания отзыва', async () => {
+  const { parseSummary } = await import('../src/canada.js');
+  const row = [{ Name: 'RECALL_NUMBER_NUM', Value: { Literal: '2018523' } }, { Name: 'SYSTEM_TYPE_ETXT', Value: { Literal: 'Airbag' } }, { Name: 'COMMENT_ETXT', Value: { Literal: 'Issue: \r\nAirbag may over-deploy.\r\n\r\nSafety Risk: \r\nInjury.\r\n\r\nCorrective Actions: \r\nDealers replace it.' } }];
+  const s = parseSummary(row);
+  assert.equal(s.issue, 'Airbag may over-deploy.'); assert.equal(s.risk, 'Injury.'); assert.equal(s.system, 'Airbag');
+  assert.match(parseSummary([{ Name: 'COMMENT_ETXT', Value: { Literal: 'Plain text. Correction: fix.' } }]).issue, /^Plain text\./);
+});

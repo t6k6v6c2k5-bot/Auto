@@ -1,4 +1,6 @@
 // Сборка отчёта по VIN из реальных открытых источников.
+import { fuelEconomy } from './fueleco.js';
+import { canadaRecalls } from './canada.js';
 import { decodeVin, recalls as getRecalls, complaints as getComplaints, ratings as getRatings } from './nhtsa.js';
 import { historyByVin, coverage } from './registry.js';
 import { wantedByVin, state as wantedState } from './wanted.js';
@@ -38,10 +40,12 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   // платные данные США/Канады: только для американского рынка (NHTSA узнал VIN или код региона 1–5), с кэшем и суточным лимитом; идут параллельно с NHTSA
   const usaP = withProvider && (decoded.trusted || ['US', 'CA', 'MX'].includes(region))
     ? withDeadline(fetchProvider(vin, plan, decoded).catch((e) => { console.error('provider failed', e.message); return null; }), 14000, null) : Promise.resolve(null);
-  const [rec, comp, rate] = await Promise.all([
+  const [rec, comp, rate, fuel, ca] = await Promise.all([
     withDeadline(getRecalls(decoded), left(), { items: [], unavailable: true }),
     withDeadline(getComplaints(decoded), left(), { count: 0, unavailable: true }),
     withDeadline(getRatings(decoded), left(), null),
+    withDeadline(fuelEconomy(decoded), left(), null),
+    withDeadline(canadaRecalls(decoded), left(), null),
   ]);
   const ua = historyByVin(vin);
   const wanted = wantedByVin(vin);
@@ -64,7 +68,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   }
   return {
     vin, region, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }

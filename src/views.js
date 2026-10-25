@@ -1,6 +1,7 @@
 import { LANGS, LOCALE, t, dict, plural } from './i18n.js';
 import { cfg, PLANS, price, paywallOn } from './config.js';
 import { origin } from './http.js';
+import { l100, gpkm } from './fueleco.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const abs = (req, p) => origin(req) + p;
@@ -291,7 +292,9 @@ function safetyBlock(lang, r, full) {
     const all = [rt.overall, rt.front, rt.side, rt.rollover];
     rateHtml = all.every((x) => !/^\d$/.test(String(x))) ? `<p class="muted">${esc(d.rate_none)}</p>` : `<dl class="kv"><dt>${esc(d.rate_overall)}</dt><dd>${starsOf(rt.overall, d)}</dd><dt>${esc(d.rate_front)}</dt><dd>${starsOf(rt.front, d)}</dd><dt>${esc(d.rate_side)}</dt><dd>${starsOf(rt.side, d)}</dd><dt>${esc(d.rate_roll)}</dt><dd>${starsOf(rt.rollover, d)}</dd></dl><p class="muted sm" lang="en">${esc(rt.description)}</p>`;
   }
-  return `<section class="panel" aria-labelledby="h-safe"><h2 id="h-safe">${esc(d.safety_h)}</h2><h3>${esc(d.recalls_h)}</h3>${recHtml}<h3>${esc(d.comp_h)}</h3>${compHtml}${rateHtml ? `<h3>${esc(d.rate_h)}</h3>${rateHtml}` : ''}</section>`;
+  const ca = r.canada;
+  const caHtml = ca ? `<h3>${esc(d.ca_h)}</h3>${ca.count ? `<p><b>${esc(fmt(d.ca_n, { n: ca.count }))}</b></p><ul class="recalls">${ca.items.slice(0, 4).map((x) => `<li><b>${en(lang, x.system || x.number)} · ${esc(x.date)}</b>${x.issue ? `<span lang="en">${esc(x.issue)}</span>` : ''}</li>`).join('')}</ul><p class="muted sm">${esc(d.ca_note)}</p>` : `<p class="good">${ic.check}<span>${esc(d.ca_none)}</span></p>`}` : '';
+  return `<section class="panel" aria-labelledby="h-safe"><h2 id="h-safe">${esc(d.safety_h)}</h2><h3>${esc(d.recalls_h)}</h3>${recHtml}${caHtml}<h3>${esc(d.comp_h)}</h3>${compHtml}${rateHtml ? `<h3>${esc(d.rate_h)}</h3>${rateHtml}` : ''}</section>`;
 }
 
 function usaBlock(lang, r) {
@@ -334,6 +337,13 @@ function passportBlock(lang, r) {
     add(d.local_make, esc(l.make)); add(d.local_model, l.model && esc(l.model)); add(d.local_year, l.years.length && esc(l.years.join(' / ')));
   } else if (x?.found) {
     add(d.dk_make, x.make && en(lang, x.make)); add(d.dk_plant, x.plant && en(lang, x.plant));
+  }
+  if (r.fuel) {
+    const f = r.fuel, r2 = (a, fn = (z) => z) => (a ? (a[0] === a[1] ? `${fn(a[0])}` : `${fn(a[1])}–${fn(a[0])}`) : '');
+    const l = (a) => r2(a, (z) => String(l100(z)).replace('.', lang === 'en' ? '.' : ','));
+    const cons = f.comb && !f.electric ? `${l(f.comb)} ${d.u_l100} (${r2(f.comb)} mpg)` : '';
+    add(d.pass_cons, cons && esc(cons));
+    add(d.pass_co2, f.co2 && !f.electric && f.co2[0] > 0 && esc(`${r2(f.co2, gpkm)} ${d.u_gkm}`));
   }
   if (v.color) add(d.w_color, esc(rv(lang, v.color)));
   if (us) { add(d.ua_imported, us.imported && esc(us.imported.date)); add(d.ua_first, esc(us.first)); add(d.ua_owners, esc(us.owners)); }
