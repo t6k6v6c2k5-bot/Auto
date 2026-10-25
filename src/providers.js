@@ -77,7 +77,7 @@ export function normalizeApibara(j) {
     house: String(v.platform || '').toUpperCase(), date: day(v.auction?.last_sold_day || v.auction?.auction_ended_at || v.auction?.auction_at), lot: String(v.lot_number || ''),
     primaryDamage: v.damage || '', secondaryDamage: '', estRepairUsd: null, finalBidUsd: price(v.pricing), retailUsd: num(v.pricing?.estimated_retail_value_usd),
     keys: null, runsDrives: null, photos: num(v.media?.images_count) ?? (v.media?.photos || []).length, location: v.location?.display || '',
-    odometerMi: num(v.odometer?.mi), status: v.auction?.last_sold_status || v.auction?.lot_status || '',
+    odometerMi: num(v.odometer?.mi), buyNowUsd: num(v.pricing?.buy_now_usd), status: v.auction?.last_sold_status || v.auction?.lot_status || v.auction?.state || '',
   };
   const rows = [main];
   for (const h of Array.isArray(v.history) ? v.history : []) {
@@ -89,7 +89,7 @@ export function normalizeApibara(j) {
     rows.push({ house: String(l.platform || '').toUpperCase(), date: day(l.auction?.last_sold_day || l.auction?.auction_at), lot: String(l.lot_number ?? ''), primaryDamage: '', finalBidUsd: price(l.pricing), status: l.auction?.last_sold_status || l.auction?.lot_status || '', keys: null, runsDrives: null, photos: null });
   }
   const odometer = main.odometerMi ? [{ date: main.date, source: main.house, miles: main.odometerMi }] : [];
-  return { provider: 'auction', auction: rows.sort((a, b) => (a.date < b.date ? 1 : -1)), odometer, photos: (v.media?.photos || []).map(httpsUrl).filter(Boolean).slice(0, 12), title: v.title ? { name: String(v.title).slice(0, 120) } : null, specs: { color: v.color || '', fuel: v.fuel_type || '', transmission: v.transmission || '', drive: v.drive_type || '' } };
+  return { provider: 'auction', auction: rows.sort((a, b) => (a.date < b.date ? 1 : -1)), odometer, photos: [...(v.media?.photos || []), ...(Array.isArray(v.media?.items) ? v.media.items.filter((x) => !x.type || x.type === 'image').map((x) => x.large || x.full || x.thumb) : [])].map(httpsUrl).filter(Boolean).slice(0, 12), title: v.title ? { name: String(v.title).slice(0, 120) } : null, specs: { color: v.color || '', fuel: v.fuel_type || '', transmission: v.transmission || '', drive: v.drive_type || '' } };
 }
 async function apibara(vin, fetchFn) {
   const r = await fetchFn(`${cfg.apibaraBase}/vehicles/${encodeURIComponent(vin)}?include=history,vin_lots`, { headers: { 'x-api-key': cfg.apibaraKey, accept: 'application/json' }, signal: AbortSignal.timeout(12000) });

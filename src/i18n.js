@@ -611,3 +611,6 @@ Object.assign(D.en, { auc_odo: 'Mileage', auc_status: 'Status', auc_lots_n: 'Auc
 Object.assign(D.uk, { auc_note: 'Дані аукціонних лотів на момент продажу. Пошкодження вказує аукціон, фактичний стан після ремонту може відрізнятися.' });
 Object.assign(D.ru, { auc_note: 'Данные аукционных лотов на момент продажи. Повреждения указывает аукцион, фактическое состояние после ремонта может отличаться.' });
 Object.assign(D.en, { auc_note: 'Auction lot data at the time of sale. Damage is as stated by the auction; condition after repair may differ.' });
+Object.assign(D.uk, { auc_buynow: '(купити зараз)' });
+Object.assign(D.ru, { auc_buynow: '(купить сейчас)' });
+Object.assign(D.en, { auc_buynow: '(buy now)' });

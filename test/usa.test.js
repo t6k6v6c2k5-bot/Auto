@@ -67,3 +67,9 @@ test('Apibara: лоты Copart/IAAI по VIN', async () => {
   assert.equal(r.auction.length, 2); assert.equal(r.auction[0].house, 'COPART'); assert.equal(r.auction[0].finalBidUsd, 6200); assert.equal(r.auction[0].primaryDamage, 'FRONT END');
   assert.equal(r.auction[1].house, 'IAAI'); assert.deepEqual(r.photos, ['https://cs.copart.com/a.jpg']); assert.equal(r.odometer[0].miles, 45210);
 });
+
+test('Apibara: фото из media.items (реальный формат ответа)', async () => {
+  const { normalizeApibara } = await import('../src/providers.js');
+  const r = normalizeApibara({ data: { platform: 'iaai', lot_number: '44031493', odometer: { mi: 196983 }, auction: { state: 'open', auction_at: '2026-10-26T13:30:00+00:00' }, pricing: { buy_now_usd: 1700 }, media: { items: [{ type: 'image', thumb: 'https://vis.iaai.com/resizer?k=1&width=400', large: 'https://vis.iaai.com/resizer?k=1&width=845' }] }, history: [{ platform: 'iaai', lot_number: 44031493, date: '2026-10-19', price: 925, status: 'Sold on Approval' }] } });
+  assert.deepEqual(r.photos, ['https://vis.iaai.com/resizer?k=1&width=845']); assert.equal(r.auction.length, 2); assert.equal(r.auction.find((x) => x.status === 'open').buyNowUsd, 1700);
+});
