@@ -4,6 +4,9 @@ import { origin } from './http.js';
 import { l100, gpkm } from './fueleco.js';
 import { toolsHomeBlock, diffBlock, toolCards } from './tools-views.js';
 import { TT } from './tools-i18n.js';
+import { providerEnabled } from './providers.js';
+import { insuranceEnabled } from './insurance.js';
+import { mentionsEnabled } from './mentions.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const abs = (req, p) => origin(req) + p;
@@ -57,7 +60,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=7">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=8">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -345,6 +348,18 @@ function insuranceBlock(lang, r) {
   return `<section class="panel${x.status === 'none' ? ' alert' : ''}" aria-labelledby="h-ins"><h2 id="h-ins">${esc(d.ins_h)}</h2>${known ? `<p class="${ok ? 'good' : ''}">${ok ? ic.check : ic.warn}<span>${esc(label)}</span></p>` : ''}${rows.length ? `<dl class="spec-grid">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}${hist}<p class="muted sm">${esc(fmt(d.ins_note, { t: String(x.checkedAt || '').slice(0, 10) }))}</p></section>`;
 }
 
+// бесплатный отчёт: что откроется в платном (только то, что реально подключено), без лишних запросов к платным поставщикам
+function paidBlock(lang, r) {
+  if (r.paidData) return '';
+  const d = dict(lang);
+  const items = [r.usMarket && providerEnabled() && d.pd_usa, insuranceEnabled() && d.pd_ins, mentionsEnabled() && d.pd_web].filter(Boolean);
+  if (!items.length) return '';
+  const cta = paywallOn()
+    ? `<a class="btn primary wide" href="/${lang}/checkout?plan=single&amp;vin=${encodeURIComponent(r.vin)}">${esc(d.pd_btn)} — ${price(PLANS.single.usd)}</a>`
+    : '';
+  return `<section class="panel paidteaser" aria-labelledby="h-paid"><h2 id="h-paid">${ic.lock}${esc(d.pd_h)}</h2><ul class="check tight">${items.map((x) => `<li>${ic.check}<span>${esc(x)}</span></li>`).join('')}</ul>${cta}</section>${paywallOn() ? '' : waitlistBox(lang, 'notify-paid')}`;
+}
+
 // «Згадки в мережі»: найденные поисковиком публикации об этом авто (домен, заголовок, тип, дата), без ссылок и контактов
 function mentionsBlock(lang, r) {
   const d = dict(lang); const m = r.mentions;
@@ -472,7 +487,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${verdictBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full

@@ -57,8 +57,9 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
     withDeadline(getRatings(decoded), left(), null),
     withDeadline(fuelEconomy(decoded), left(), null),
     withDeadline(canadaRecalls(decoded), left(), null),
-    withDeadline(checkInsurance({ vin, plate: regPlate }), 8500, null),
-    withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null),
+    // платные внешние источники (страховка, поиск упоминаний) — только в оплаченном отчёте
+    withProvider ? withDeadline(checkInsurance({ vin, plate: regPlate }), 8500, null) : null,
+    withProvider ? withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null) : null,
     photoP,
   ]);
   const mismatch = consistency(decoded, ua);
@@ -75,8 +76,9 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
     if (!ua.rows.length) next.push(local ? 'c_localonly' : 'c_nocover');
     next.push('c_default');
   }
+  const usMarket = Boolean(decoded.trusted || ['US', 'CA', 'MX'].includes(region));
   return {
-    vin, region, generatedAt: new Date().toISOString(), found, next,
+    vin, region, usMarket, paidData: withProvider, generatedAt: new Date().toISOString(), found, next,
     vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), mentions, insurance, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };

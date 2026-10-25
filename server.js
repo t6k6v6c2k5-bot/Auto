@@ -175,7 +175,7 @@ async function page(req, res, url, lang, rest) {
     if (v.ok) {
       store.logSearch(v.vin, lang);
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
-      const r = await buildReport(v.vin, { withProvider: !paywallOn(), plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // в бесплатном режиме платные данные США подтягиваем сразу (кэш + суточный лимит)
+      const r = await buildReport(v.vin, { withProvider: false, plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // платные источники — только в оплаченном отчёте
       // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
       let early = [], unverified = false;
       if (fromPlate && looksLikePlate(fromPlate)) {
@@ -246,13 +246,27 @@ function sitemap(req) {
 }
 
 // Админка: HTTP Basic (пароль = ADMIN_KEY), сравнение по хешам, лимит попыток
-function admin(req, res) {
+function adminAuth(req, res) {
   const deny = () => send(req, res, 401, 'Unauthorized', 'text/plain; charset=utf-8', { 'www-authenticate': 'Basic realm="VINScope admin", charset="UTF-8"', 'cache-control': 'no-store' });
-  if (!cfg.adminKey || cfg.adminKey.length < 16) return send(req, res, 404, 'Not found', 'text/plain');
-  if (limited('adm:' + ipOf(req), 10)) return send(req, res, 429, 'Too many attempts', 'text/plain');
+  if (!cfg.adminKey || cfg.adminKey.length < 16) { send(req, res, 404, 'Not found', 'text/plain'); return false; }
+  if (limited('adm:' + ipOf(req), 30)) { send(req, res, 429, 'Too many attempts', 'text/plain'); return false; }
   const m = /^Basic (.+)$/.exec(req.headers.authorization || '');
   const pass = m ? Buffer.from(m[1], 'base64').toString('utf8').split(':').slice(1).join(':') : '';
-  if (!m || !timingSafeEqual(sha(pass), sha(cfg.adminKey))) return deny();
+  if (!m || !timingSafeEqual(sha(pass), sha(cfg.adminKey))) { deny(); return false; }
+  return true;
+}
+// полный отчёт с платными источниками для владельца (проверка поставщиков без оплаты)
+async function adminReport(req, res, url) {
+  if (!adminAuth(req, res)) return;
+  const v = validateVin(url.searchParams.get('vin') || '');
+  const lang = LANGS.includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'uk';
+  if (!v.ok) return send(req, res, 400, 'Bad VIN', 'text/plain; charset=utf-8');
+  const r = await buildReport(v.vin, { withProvider: true });
+  return send(req, res, 200, V.checkPage(req, lang, r, { full: true }), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
+}
+
+function admin(req, res) {
+  if (!adminAuth(req, res)) return;
   const s = store.stats();
   const rows = s.recent.map((r) => `<tr><td>${V.esc(r.id)}</td><td>${V.esc(r.vin)}</td><td>${V.esc(r.plan)}</td><td>${V.esc(r.status)}</td><td>${price(r.amount)}</td><td>${new Date(r.created_at).toISOString().slice(0, 16)}</td></tr>`).join('');
   const c = coverage();
@@ -260,6 +274,7 @@ function admin(req, res) {
 <p><b>Paid orders (Stripe):</b> ${s.paid.c} · <b>Revenue:</b> ${price(s.paid.s)} · <b>Searches:</b> ${s.searches} (7d: ${s.searches7}) · <b>Waitlist:</b> ${s.waitlist}</p>
 <p><b>Wanted:</b> ${wantedState.count} (upd ${V.esc(wantedState.updatedAt)}) · <b>Registry:</b> ${V.esc(JSON.stringify(c))} · worker: ${V.esc(JSON.stringify(regStatus))}</p>
 <p>${s.byStatus.map((x) => `${V.esc(x.status)}: ${x.c}`).join(' · ')}</p><p>Top VINs: ${s.topVins.map((x) => `${V.esc(x.vin)} (${x.c})`).join(', ')}</p>
+<form action=/admin/report method=get style="margin:16px 0"><b>Полный (платный) отчёт:</b> <input name=vin placeholder=VIN maxlength=17 style="font:16px monospace;padding:6px"> <button>Открыть</button> <small>тратит запросы платных поставщиков</small></form>
 <table><tr><th>id<th>vin<th>plan<th>status<th>amount<th>created</tr>${rows}</table>`, 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
 }
 
@@ -271,6 +286,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/robots.txt') return send(req, res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /*/checkout\nSitemap: ${origin(req)}/sitemap.xml\n`, 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res);
+    if (pathname === '/admin/report') return adminReport(req, res, url);
     if (pathname === '/webhook/stripe' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);
       if (!stripe.verifyWebhook(raw, req.headers['stripe-signature'])) return send(req, res, 400, 'bad signature', 'text/plain');

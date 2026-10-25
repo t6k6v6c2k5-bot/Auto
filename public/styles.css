@@ -382,3 +382,4 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
 .scams .slink{margin-top:auto;padding-top:6px;font-weight:700;color:var(--blue);text-decoration:none}.scams .slink:hover{text-decoration:underline}
 @media(max-width:1020px){.scams{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.scams{grid-template-columns:1fr}}
 .lotphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 8px}.lotphotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.paidteaser{border:2px solid var(--amber);background:linear-gradient(180deg,color-mix(in srgb,var(--amber) 8%,var(--surface)),var(--surface))}.paidteaser .btn{margin-top:14px}
