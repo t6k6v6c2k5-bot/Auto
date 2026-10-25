@@ -146,3 +146,32 @@ export const TT = {
   },
 };
 TT.uk.regions = REG_UK; TT.ru.regions = REG_RU; TT.en.regions = REG_EN;
+
+// «Как обманывают при покупке авто»: схема, как проверить и инструмент для проверки
+TT.uk.scam_h = 'Як обманюють при купівлі авто й як це перевірити'; TT.uk.scam_how = 'Як перевірити';
+TT.uk.scams = [
+  ['Скручений пробіг', 'Авто «омолоджують» на 100–200 тис. км, щоб продати дорожче.', 'Порівняйте пробіг із віком авто, знос керма, педалей і сидіння та сервісну історію.', '/tools/mileage', 'Чи реальний пробіг'],
+  ['Утоплене чи «тотальне» авто з США', 'Машини після повені або серйозної аварії ремонтують і продають як цілі.', 'Розшифруйте VIN: країна виробництва, відклики. Шукайте сліди води та іржі під килимками й у багажнику.', '/tools/vin', 'Розшифровка VIN'],
+  ['Авто в розшуку або «двійник»', 'Викрадене авто з перебитим VIN або з номерами іншої машини.', 'Звірте VIN на кузові, під лобовим склом і в документах та перевірте розшук.', '/wanted', 'Перевірити розшук'],
+  ['Застава або арешт', 'Продають авто в заставі банку чи під арештом — після купівлі його можуть забрати.', 'Попросіть витяг про відсутність обтяжень і оформлюйте угоду в сервісному центрі або в нотаріуса.', '/tools/checklist', 'Чек-лист огляду'],
+  ['«Щойно пригнане» авто', 'Приховують, що авто давно в Україні й змінило кількох власників.', 'Подивіться історію реєстрацій: дату першої реєстрації й кількість змін власника.', '/', 'Перевірити за VIN'],
+  ['Завдаток за «бронь»', 'Просять передоплату, щоб «притримати» авто, і зникають.', 'Не платіть до огляду. Розраховуйтеся безготівково після підписання договору.', '/tools/checklist', 'Чек-лист огляду'],
+];
+TT.ru.scam_h = 'Как обманывают при покупке авто и как это проверить'; TT.ru.scam_how = 'Как проверить';
+TT.ru.scams = [
+  ['Скрученный пробег', 'Авто «омолаживают» на 100–200 тыс. км, чтобы продать дороже.', 'Сравните пробег с возрастом авто, износ руля, педалей и сиденья и сервисную историю.', '/tools/mileage', 'Реален ли пробег'],
+  ['Утопленное или «тотальное» авто из США', 'Машины после наводнения или серьёзной аварии ремонтируют и продают как целые.', 'Расшифруйте VIN: страна производства, отзывы. Ищите следы воды и ржавчины под ковриками и в багажнике.', '/tools/vin', 'Расшифровка VIN'],
+  ['Авто в розыске или «двойник»', 'Угнанное авто с перебитым VIN или с номерами другой машины.', 'Сверьте VIN на кузове, под лобовым стеклом и в документах и проверьте розыск.', '/wanted', 'Проверить розыск'],
+  ['Залог или арест', 'Продают авто в залоге у банка или под арестом — после покупки его могут забрать.', 'Попросите выписку об отсутствии обременений и оформляйте сделку в сервисном центре или у нотариуса.', '/tools/checklist', 'Чек-лист осмотра'],
+  ['«Только что пригнанное» авто', 'Скрывают, что авто давно в Украине и сменило нескольких владельцев.', 'Посмотрите историю регистраций: дату первой регистрации и число смен владельца.', '/', 'Проверить по VIN'],
+  ['Задаток за «бронь»', 'Просят предоплату, чтобы «придержать» авто, и исчезают.', 'Не платите до осмотра. Рассчитывайтесь безналично после подписания договора.', '/tools/checklist', 'Чек-лист осмотра'],
+];
+TT.en.scam_h = 'How buyers get cheated and how to check'; TT.en.scam_how = 'How to check';
+TT.en.scams = [
+  ['Rolled-back mileage', 'The odometer is wound back by 100–200 thousand km to raise the price.', 'Compare mileage with the car’s age, check wear on the wheel, pedals and seat, and the service history.', '/tools/mileage', 'Is the mileage real?'],
+  ['Flooded or written-off US car', 'Cars after floods or major crashes are repaired and sold as clean.', 'Decode the VIN: country of manufacture, recalls. Look for water marks and rust under the mats and in the boot.', '/tools/vin', 'VIN decoder'],
+  ['Stolen car or “clone”', 'A stolen car with a re-stamped VIN or another car’s plates.', 'Match the VIN on the body, under the windscreen and in the papers, and check the wanted list.', '/wanted', 'Wanted check'],
+  ['Pledged or seized car', 'A car under a bank pledge or arrest can be taken away after you buy it.', 'Ask for proof of no encumbrances and sign the deal at a service centre or notary.', '/tools/checklist', 'Inspection checklist'],
+  ['“Just imported” car', 'The seller hides that the car has been in Ukraine for years with several owners.', 'Check the registration history: first registration date and number of owner changes.', '/', 'Check by VIN'],
+  ['Deposit to “reserve” the car', 'You are asked to prepay to “hold” the car, then the seller disappears.', 'Pay nothing before the viewing. Pay by bank transfer after signing the contract.', '/tools/checklist', 'Inspection checklist'],
+];

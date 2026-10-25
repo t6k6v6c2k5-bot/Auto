@@ -98,16 +98,20 @@ export async function getPhoto(make, model, year) {
     mem.set(key, { t: Date.now(), v }); return v;
   }
   const b = brandNames(make)[0], m = modelNames(model);
-  const queries = [...new Set([y && m[0] ? `${y} ${b} ${m.at(-1)}` : '', m[0] ? `${b} ${m[0]}` : '', m.length > 1 ? `${b} ${m.at(-1)}` : '', !m.length ? `${b} car` : ''].filter(Boolean))].slice(0, 3);
-  let result = null, blocked = false;
-  for (const q of queries) {
-    try {
-      const pages = await limited(() => commons(q));
-      if (pages?.blocked) { blocked = true; break; }
-      result = pages ? pickFile(pages, { make, model, year: y }) : null;
-      if (result) break;
-    } catch { blocked = true; break; }
-  }
+  const queries = [...new Set([y && m[0] ? `${y} ${b} ${m.at(-1)}` : '', m[0] ? `${b} ${m[0]}` : '', m.length > 1 ? `${b} ${m.at(-1)}` : ''].filter(Boolean))].slice(0, 3);
+  // ступени: точная модель и год → та же модель любого года → любое авто этой марки
+  let result = null, blocked = false; const seen = [];
+  const run = async (q) => {
+    const pages = await limited(() => commons(q));
+    if (pages?.blocked) { blocked = true; return []; }
+    seen.push(...(pages || []));
+    return pages || [];
+  };
+  try {
+    for (const q of queries) { const pages = await run(q); if (blocked) break; result = pickFile(pages, { make, model, year: y }); if (result) break; }
+    if (!result && !blocked) result = pickFile(seen, { make, model, year: null });
+    if (!result && !blocked) { const pages = await run(`${b} car`); if (!blocked) result = pickFile(pages, { make, model: '', year: null }); }
+  } catch { blocked = true; }
   if (!blocked) store.setPhotoRow(key, result?.url || null, result?.title || null, result?.credit || null);
   mem.set(key, { t: Date.now() - (blocked ? 5.9 * 3600e3 : 0), v: result }); // при блокировке повторим скоро
   return result;

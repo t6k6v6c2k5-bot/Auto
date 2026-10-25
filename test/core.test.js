@@ -141,3 +141,10 @@ test('фото: выбор снимка нужной модели и года, �
   assert.equal(pickFile([pg('2019 Honda Accord LX.jpg', 1)], { make: 'HONDA', model: 'Accord', year: 2003 }), null); // другое поколение
   assert.equal(pickFile([pg('VAZ-2106 in Kyiv.jpg', 1)], { make: 'LADA (ВАЗ)', model: '21063', year: 1986 }).title, 'VAZ-2106 in Kyiv.jpg');
 });
+
+test('фото: без точной модели берём любое фото марки', async () => {
+  const { pickFile } = await import('../src/photo.js');
+  const pg = (title, index) => ({ title: 'File:' + title, index, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/a.jpg', thumbwidth: 960 }] });
+  assert.equal(pickFile([pg('2019 Honda Accord LX.jpg', 1)], { make: 'HONDA', model: 'Accord', year: null }).title, '2019 Honda Accord LX.jpg');
+  assert.equal(pickFile([pg('Honda Civic in Kyiv.jpg', 1)], { make: 'HONDA', model: '', year: null }).title, 'Honda Civic in Kyiv.jpg');
+});
