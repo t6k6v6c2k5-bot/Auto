@@ -318,6 +318,14 @@ function usaBlock(lang, r) {
   return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(fmt(d.usa_src, { p: (u.providers || []).join(', ') }))}</p></section>`;
 }
 
+function insuranceBlock(lang, r) {
+  const d = dict(lang); const x = r.insurance;
+  if (!x || x.status === 'unknown') return '';
+  const ok = x.status === 'active';
+  const rows = [[d.ins_status, ok ? d.ins_active : x.status === 'pending' ? d.ins_pending : d.ins_none], [d.ins_insurer, x.insurer], [d.ins_period, x.from && x.to ? `${x.from} — ${x.to}` : ''], [d.ins_kind, x.kind]].filter(([, v]) => v);
+  return `<section class="panel${x.status === 'none' ? ' alert' : ''}" aria-labelledby="h-ins"><h2 id="h-ins">${esc(d.ins_h)}</h2><p class="${ok ? 'good' : ''}">${ok ? ic.check : ic.warn}<span>${esc(ok ? d.ins_active : x.status === 'pending' ? d.ins_pending : d.ins_none)}</span></p><dl class="spec-grid">${rows.slice(1).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><p class="muted sm">${esc(fmt(d.ins_note, { t: String(x.checkedAt || '').slice(0, 10) }))}</p></section>`;
+}
+
 // «Згадки в мережі»: найденные поисковиком публикации об этом авто (домен, заголовок, тип, дата), без ссылок и контактов
 function mentionsBlock(lang, r) {
   const d = dict(lang); const m = r.mentions;
@@ -440,7 +448,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe], ['g-next', d.g_next]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full

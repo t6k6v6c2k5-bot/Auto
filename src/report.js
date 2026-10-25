@@ -1,5 +1,6 @@
 // Сборка отчёта по VIN из реальных открытых источников.
 import { searchCount } from './db.js';
+import { checkInsurance } from './insurance.js';
 import { findMentions } from './mentions.js';
 import { fuelEconomy } from './fueleco.js';
 import { canadaRecalls } from './canada.js';
@@ -53,6 +54,8 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
   const wanted = wantedByVin(vin);
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
+  const regPlate = plate || ua.summary?.plates?.at(-1) || '';
+  const insurance = await withDeadline(checkInsurance({ vin, plate: regPlate }), 8500, null);
   const mentions = await withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null);
   const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch, local, usa });
@@ -71,7 +74,7 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
   }
   return {
     vin, region, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), mentions, ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, checks: searchCount(vin), mentions, insurance, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }

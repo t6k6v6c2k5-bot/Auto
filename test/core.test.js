@@ -112,3 +112,10 @@ test('mentions: фильтр точного совпадения, очистка
   const r = normalizeResults(json, ['1HGCM82633A004352']);
   assert.equal(r.length, 1); assert.equal(r[0].domain, 'olx.ua'); assert.equal(r[0].kind, 'sale'); assert.equal(r[0].published, '2025-03-01');
 });
+
+test('insurance: нормализация ответа поставщика ОСЦПВ', async () => {
+  const { normalizeInsurance } = await import('../src/insurance.js');
+  assert.deepEqual(normalizeInsurance({ status: 'ACTIVE', insurer: 'Х', from: '2026-01-01T00:00', to: '2026-12-31' }), { status: 'active', insurer: 'Х', from: '2026-01-01', to: '2026-12-31', kind: '' });
+  assert.equal(normalizeInsurance({ active: false }).status, 'none');
+  assert.equal(normalizeInsurance({}).status, 'unknown');
+});
