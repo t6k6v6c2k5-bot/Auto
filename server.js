@@ -9,7 +9,8 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { cfg, PLANS, paywallOn, price, CURRENCY } from './src/config.js';
+import { cfg, PLANS, paywallOn, price, CURRENCY, payProvider } from './src/config.js';
+import * as mono from './src/mono.js';
 import { LANGS, dict } from './src/i18n.js';
 import { validateVin } from './src/vin.js';
 import { normalizePlate, looksLikePlate } from './src/plate.js';
@@ -51,7 +52,7 @@ async function doFulfil(orderId) {
   if (!report.found) {
     // Ноу-хау: автовозврат, если по VIN нет данных ни в одном источнике
     let refunded = !o.payment_intent; // у заказов по коду пакета возвращать в Stripe нечего
-    if (o.payment_intent) { try { await stripe.refund(o.payment_intent); refunded = true; } catch (e) { console.error('REFUND FAILED for order', o.id, e.message); } }
+    if (o.payment_intent) { try { await (o.payment_intent.startsWith('pi_') ? stripe.refund(o.payment_intent) : mono.cancel(o.payment_intent)); refunded = true; } catch (e) { console.error('REFUND FAILED for order', o.id, e.message); } }
     if (o.status === 'credit' && o.credit_code) store.returnCredit(o.credit_code);
     store.updateOrder(o.id, { status: refunded ? 'refunded' : 'refund_failed' }); // refund_failed виден в /admin: вернуть вручную
     return store.getOrder(o.id);
@@ -97,6 +98,14 @@ async function api(req, res, url) {
     const o = store.newOrder({ vin: v.vin, plan: b.plan, email, amount: plan.amount, lang });
     try {
       const d = dict(lang).plans[b.plan];
+      if (payProvider() === 'mono') {
+        const inv = await mono.createInvoice({
+          order: o, destination: `VINScope — ${d[0]}, VIN ${v.vin}`,
+          redirectUrl: `${origin(req)}/${lang}/success?o=${o.id}&s=${o.secret}`, webHookUrl: `${origin(req)}/webhook/mono`,
+        });
+        store.updateOrder(o.id, { stripe_session: inv.invoiceId }); // id платежа у провайдера (колонка общая)
+        return json(req, res, 200, { url: inv.pageUrl });
+      }
       const s = await stripe.createCheckout({
         order: o, name: `VINScope — ${d[0]}`, description: `VIN ${v.vin}`,
         successUrl: `${origin(req)}/${lang}/success?o=${o.id}&s=${o.secret}`, cancelUrl: `${origin(req)}/${lang}/checkout?plan=${b.plan}&vin=${v.vin}`,
@@ -217,7 +226,10 @@ async function page(req, res, url, lang, rest) {
     const sec = url.searchParams.get('s') || '';
     if (!o || !o.success_secret || sec.length !== o.success_secret.length || !timingSafeEqual(Buffer.from(sec), Buffer.from(o.success_secret))) return redirect(res, `/${lang}/`);
     try {
-      if (o.stripe_session && !o.report && o.status === 'pending') {
+      if (o.stripe_session && !o.report && o.status === 'pending' && !o.stripe_session.startsWith('cs_')) {
+        const st = await mono.invoiceStatus(o.stripe_session); // вебхук может прийти позже — проверяем статус сами
+        if (mono.isPaid(st, o) && store.claimPaid(o.id, st.invoiceId || o.stripe_session)) await fulfil(o.id);
+      } else if (o.stripe_session && !o.report && o.status === 'pending') {
         const s = await stripe.getSession(o.stripe_session);
         if (s.payment_status === 'paid' && s.amount_total === o.amount && s.currency === CURRENCY && store.claimPaid(o.id, s.payment_intent)) await fulfil(o.id);
       } else if (!o.report) await fulfil(o.id);
@@ -287,6 +299,14 @@ const server = createServer(async (req, res) => {
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
+    if (pathname === '/webhook/mono' && req.method === 'POST') {
+      const raw = await readBody(req, 1e6);
+      if (!cfg.monoToken || !(await mono.verifyWebhook(raw, req.headers['x-sign']))) return send(req, res, 400, 'bad signature', 'text/plain');
+      const ev = JSON.parse(raw);
+      const o = ev.reference ? store.getOrder(ev.reference) : null;
+      if (o && o.stripe_session === ev.invoiceId && mono.isPaid(ev, o) && store.claimPaid(o.id, ev.invoiceId)) await fulfil(o.id);
+      return send(req, res, 200, 'ok', 'text/plain');
+    }
     if (pathname === '/webhook/stripe' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);
       if (!stripe.verifyWebhook(raw, req.headers['stripe-signature'])) return send(req, res, 400, 'bad signature', 'text/plain');
@@ -321,7 +341,7 @@ const server = createServer(async (req, res) => {
 });
 server.headersTimeout = 15e3; server.requestTimeout = 30e3; server.keepAliveTimeout = 65e3;
 server.listen(cfg.port, '0.0.0.0', () => {
-  console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? 'on (stripe)' : 'off (launch mode)'}`);
+  console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);
   startWanted(); startRegistry();
   store.purgeOld(); setInterval(() => store.purgeOld(), 24 * 3600e3).unref();
 });

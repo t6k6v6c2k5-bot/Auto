@@ -7,6 +7,7 @@ export const cfg = {
   registryToYear: Number(process.env.REGISTRY_TO_YEAR) || 0,          // для тестов: ограничить годы и пропустить текущий CSV
   registryMaxGB: Number(process.env.REGISTRY_MAX_GB) || 3.5,
   stripeKey: process.env.STRIPE_SECRET_KEY || '',
+  monoToken: process.env.MONO_TOKEN || '',                      // Monobank Acquiring (X-Token из web.monobank.ua или тестовый с api.monobank.ua)
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
   marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
@@ -29,7 +30,8 @@ export const cfg = {
   plausible: process.env.PLAUSIBLE_DOMAIN || '',
 };
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.
-export const paywallOn = () => Boolean(cfg.stripeKey);
+export const paywallOn = () => Boolean(cfg.monoToken || cfg.stripeKey);
+export const payProvider = () => (cfg.monoToken ? 'mono' : cfg.stripeKey ? 'stripe' : '');
 
 // цены в копейках гривны (Stripe: currency uah)
 export const CURRENCY = 'uah';

@@ -51,3 +51,17 @@ test('Подпись вебхука Stripe: несколько v1, окно вр
 test('normalizeVin убирает пробелы и разделители', () => {
   assert.equal(normalizeVin(' 1hgcm-826 33a004352 '), '1HGCM82633A004352');
 });
+
+test('monobank: подпись вебхука (ECDSA) и проверка оплаты', async () => {
+  const { generateKeyPairSync, createSign } = await import('node:crypto');
+  const { verifyWith, isPaid } = await import('../src/mono.js');
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const body = JSON.stringify({ invoiceId: 'p2_x', status: 'success', amount: 9900, ccy: 980, reference: 'o1' });
+  const sig = createSign('SHA256').update(body).sign(privateKey).toString('base64');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  assert.ok(verifyWith(pem, body, sig));
+  assert.ok(!verifyWith(pem, body.replace('9900', '1'), sig));
+  assert.ok(isPaid(JSON.parse(body), { id: 'o1', amount: 9900 }));
+  assert.ok(!isPaid({ ...JSON.parse(body), amount: 100 }, { id: 'o1', amount: 9900 }));
+  assert.ok(!isPaid({ ...JSON.parse(body), status: 'processing' }, { id: 'o1', amount: 9900 }));
+});
