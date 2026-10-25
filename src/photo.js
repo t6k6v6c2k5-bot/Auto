@@ -89,7 +89,7 @@ async function commons(q) {
 export async function getPhoto(make, model, year) {
   if (!make) return null;
   const y = Number(year) || null;
-  const key = `v3|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
+  const key = `v4|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);
@@ -110,7 +110,7 @@ export async function getPhoto(make, model, year) {
   try {
     for (const q of queries) { const pages = await run(q); if (blocked) break; result = pickFile(pages, { make, model, year: y }); if (result) break; }
     if (!result && !blocked) result = pickFile(seen, { make, model, year: null });
-    if (!result && !blocked) { const pages = await run(`${b} car`); if (!blocked) result = pickFile(pages, { make, model: '', year: null }); }
+    if (!result && !blocked) { const pages = await run(b); if (!blocked) result = pickFile(pages, { make, model: '', year: null }); }
   } catch { blocked = true; }
   if (!blocked) store.setPhotoRow(key, result?.url || null, result?.title || null, result?.credit || null);
   mem.set(key, { t: Date.now() - (blocked ? 5.9 * 3600e3 : 0), v: result }); // при блокировке повторим скоро
