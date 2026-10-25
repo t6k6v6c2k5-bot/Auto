@@ -381,3 +381,4 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
 .scams h3{margin:0 0 8px;font-size:18px}.scams p{margin:0 0 10px;color:var(--ink-2);font-size:15px}.scams .scheck{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:14px}
 .scams .slink{margin-top:auto;padding-top:6px;font-weight:700;color:var(--blue);text-decoration:none}.scams .slink:hover{text-decoration:underline}
 @media(max-width:1020px){.scams{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.scams{grid-template-columns:1fr}}
+.lotphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 8px}.lotphotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}

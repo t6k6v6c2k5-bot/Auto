@@ -10,6 +10,8 @@ export const cfg = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   adminKey: process.env.ADMIN_KEY || '',
   marketcheckKey: process.env.MARKETCHECK_API_KEY || '',
+  apibaraKey: process.env.APIBARA_API_KEY || '',                 // аукционы Copart/IAAI (бесплатный тариф: 100 запросов в месяц)
+  apibaraBase: process.env.APIBARA_BASE || 'https://apibara.tech/api/v1/vehicle-auction',
   mtsbuReadUrl: process.env.MTSBU_READ_URL || '',                // напр. https://policy-read-test.mtsbu.ua (тест) — read-сервисы Полис Онлайн МТСБУ
   mtsbuToken: process.env.MTSBU_TOKEN || '',                    // Base64(логин:пароль), выдаёт МТСБУ
   insuranceUrl: process.env.INSURANCE_API_URL || '',            // поставщик проверки ОСЦПВ (договор с МТСБУ или партнёр): GET ?vin=&plate=&date=

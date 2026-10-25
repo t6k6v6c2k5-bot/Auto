@@ -127,6 +127,22 @@ async function api(req, res, url) {
     const r = await buildReport(v.vin);
     return json(req, res, 200, { vin: v.vin, region: v.region, decoded: r.decoded, risk: r.risk, wanted: r.wanted.length, registryRecords: r.ua.rows.length });
   }
+  // фото аукционного лота: отдаём через себя (адрес берётся только из нашего кэша по VIN, наружу ключи не уходят)
+  if (url.pathname === '/api/lotimg' && req.method === 'GET') {
+    const vin = String(url.searchParams.get('v') || '').toUpperCase().slice(0, 17), i = Number(url.searchParams.get('i'));
+    const src = store.getUsaCache(vin)?.json?.photos?.[i];
+    if (!src || !/^https:\/\//.test(src)) return send(req, res, 404, 'not found', 'text/plain; charset=utf-8');
+    if (limited('img:' + ipOf(req), 120)) return send(req, res, 429, 'slow down', 'text/plain; charset=utf-8');
+    try {
+      const r = await fetch(src, { signal: AbortSignal.timeout(10000), redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (compatible; VINScope/1.1)', accept: 'image/avif,image/webp,image/*' } });
+      const type = r.headers.get('content-type') || '';
+      if (!r.ok || !/^image\/(jpeg|png|webp)/.test(type)) return send(req, res, 404, 'not found', 'text/plain; charset=utf-8');
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length > 6e6) return send(req, res, 413, 'too large', 'text/plain; charset=utf-8');
+      res.writeHead(200, { 'content-type': type, 'cache-control': 'public, max-age=604800, immutable', 'x-content-type-options': 'nosniff' });
+      return res.end(buf);
+    } catch { return send(req, res, 502, 'unavailable', 'text/plain; charset=utf-8'); }
+  }
   return json(req, res, 404, { error: L('uk', 'err_bad') });
 }
 

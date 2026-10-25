@@ -60,3 +60,10 @@ test('fetchProvider: ключ в query, кэш, сбой не кэшируетс
   const capped = await fetchProvider('4HGCM82633A004355', 'single', null, { fetchFn: ok });
   assert.equal(capped.capped, true, 'после лимита платные запросы не уходят');
 });
+
+test('Apibara: лоты Copart/IAAI по VIN', async () => {
+  const { normalizeApibara } = await import('../src/providers.js');
+  const r = normalizeApibara({ data: { platform: 'copart', lot_number: '123', title: '2018 TOYOTA CAMRY SE', damage: 'FRONT END', odometer: { mi: 45210 }, auction: { last_sold_day: '2024-05-02', last_sold_status: 'sold' }, pricing: { last_sold_price_usd: 6200, estimated_retail_value_usd: 18500 }, location: { display: 'CA - SAN DIEGO' }, media: { images_count: 2, photos: ['https://cs.copart.com/a.jpg', 'http://127.0.0.1/x.jpg'] }, history: [{ platform: 'iaai', lot_number: 777, date: '2023-01-10', price: 9000, status: 'not sold' }] } });
+  assert.equal(r.auction.length, 2); assert.equal(r.auction[0].house, 'COPART'); assert.equal(r.auction[0].finalBidUsd, 6200); assert.equal(r.auction[0].primaryDamage, 'FRONT END');
+  assert.equal(r.auction[1].house, 'IAAI'); assert.deepEqual(r.photos, ['https://cs.copart.com/a.jpg']); assert.equal(r.odometer[0].miles, 45210);
+});

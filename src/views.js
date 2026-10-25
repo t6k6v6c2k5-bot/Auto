@@ -57,7 +57,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=6">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=7">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -322,8 +322,14 @@ function usaBlock(lang, r) {
   const L = u.listings || [];
   const listHtml = L.length ? `${table(L.slice(0, 5))}${L.length > 5 ? `<details><summary>${esc(fmt(d.usa_more, { n: L.length }))}</summary>${table(L.slice(5))}</details>` : ''}` : '';
   const A = u.auction || [];
-  const aucHtml = A.length ? `<h3>${esc(d.usa_auc_h)}</h3><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_auc_h)}"><table class="tl"><thead><tr>${['auc_house', 'usa_col_date', 'auc_lot', 'auc_dmg', 'auc_repair', 'auc_bid', 'auc_keys', 'auc_runs', 'auc_photos'].map((k) => `<th scope="col">${esc(d[k])}</th>`).join('')}</tr></thead><tbody>${A.map((x) => `<tr><td data-l="${esc(d.auc_house)}">${esc(x.house)}</td><td data-l="${esc(d.usa_col_date)}">${esc(String(x.date || '').slice(0, 10))}</td><td data-l="${esc(d.auc_lot)}">${esc(x.lot)}</td><td data-l="${esc(d.auc_dmg)}">${esc([x.primaryDamage, x.secondaryDamage].filter(Boolean).join(' / '))}</td><td data-l="${esc(d.auc_repair)}">${money(x.estRepairUsd)}</td><td data-l="${esc(d.auc_bid)}">${money(x.finalBidUsd)}</td><td data-l="${esc(d.auc_keys)}">${x.keys == null ? '—' : esc(x.keys ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_runs)}">${x.runsDrives == null ? '—' : esc(x.runsDrives ? d.auc_yes : d.auc_no)}</td><td data-l="${esc(d.auc_photos)}">${esc(x.photos ?? '—')}</td></tr>`).join('')}</tbody></table></div>` : '';
-  return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(fmt(d.usa_src, { p: (u.providers || []).join(', ') }))}</p></section>`;
+  const km = (mi) => (mi ? `${Number(Math.round(mi * 1.609344)).toLocaleString(loc)} km` : '—');
+  const acols = ['auc_house', 'usa_col_date', 'auc_lot', 'auc_dmg', 'auc_bid', 'auc_odo', 'auc_status'];
+  const arow = (x) => `<tr><td data-l="${esc(d.auc_house)}">${esc(x.house)}</td><td data-l="${esc(d.usa_col_date)}">${esc(String(x.date || '').slice(0, 10) || '—')}</td><td data-l="${esc(d.auc_lot)}">${esc(x.lot || '—')}</td><td data-l="${esc(d.auc_dmg)}">${esc([x.primaryDamage, x.secondaryDamage].filter(Boolean).join(' / ') || '—')}</td><td data-l="${esc(d.auc_bid)}">${money(x.finalBidUsd)}</td><td data-l="${esc(d.auc_odo)}">${km(x.odometerMi)}</td><td data-l="${esc(d.auc_status)}">${esc(x.status || '—')}</td></tr>`;
+  const top = A[0];
+  const aucStats = top ? `<div class="stats"><div><span>${esc(d.auc_lots_n)}</span><b>${A.length}</b></div>${top.primaryDamage ? `<div><span>${esc(d.auc_dmg)}</span><b>${esc(top.primaryDamage)}</b></div>` : ''}${top.finalBidUsd ? `<div><span>${esc(d.auc_bid)}</span><b>${money(top.finalBidUsd)}</b></div>` : ''}${top.retailUsd ? `<div><span>${esc(d.auc_retail)}</span><b>${money(top.retailUsd)}</b></div>` : ''}${top.odometerMi ? `<div><span>${esc(d.auc_odo)}</span><b>${km(top.odometerMi)}</b></div>` : ''}</div>` : '';
+  const gal = (u.photos || []).length ? `<div class="lotphotos">${u.photos.map((_, i) => `<img src="/api/lotimg?v=${encodeURIComponent(r.vin)}&amp;i=${i}" alt="${esc(fmt(d.auc_photo_alt, { n: i + 1 }))}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`).join('')}</div><p class="muted sm">${esc(d.auc_photo_note)}</p>` : '';
+  const aucHtml = A.length ? `<h3>${esc(d.usa_auc_h)}</h3>${aucStats}${gal}<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.usa_auc_h)}"><table class="tl"><thead><tr>${acols.map((k) => `<th scope="col">${esc(d[k])}</th>`).join('')}</tr></thead><tbody>${A.slice(0, 10).map(arow).join('')}</tbody></table></div>` : '';
+  return `<section class="panel" aria-labelledby="h-usa">${head}${roll}${stats}${listHtml}${aucHtml}<p class="muted sm">${esc(L.length ? d.usa_src : d.auc_note)}</p></section>`;
 }
 
 function insuranceBlock(lang, r) {

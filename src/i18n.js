@@ -605,3 +605,9 @@ for (const [l, lic, us] of [
 Object.assign(D.uk, { photo_by: 'Фото' });
 Object.assign(D.ru, { photo_by: 'Фото' });
 Object.assign(D.en, { photo_by: 'Photo' });
+Object.assign(D.uk, { auc_odo: 'Пробіг', auc_status: 'Статус', auc_lots_n: 'Лотів на аукціонах', auc_retail: 'Оцінка ринкової вартості', auc_photo_alt: 'Фото з аукціону, {n}', auc_photo_note: 'Фото цього авто з аукціонного лота на момент продажу.' });
+Object.assign(D.ru, { auc_odo: 'Пробег', auc_status: 'Статус', auc_lots_n: 'Лотов на аукционах', auc_retail: 'Оценка рыночной стоимости', auc_photo_alt: 'Фото с аукциона, {n}', auc_photo_note: 'Фото этого авто из аукционного лота на момент продажи.' });
+Object.assign(D.en, { auc_odo: 'Mileage', auc_status: 'Status', auc_lots_n: 'Auction lots', auc_retail: 'Estimated retail value', auc_photo_alt: 'Auction photo {n}', auc_photo_note: 'Photos of this car from the auction lot at the time of sale.' });
+Object.assign(D.uk, { auc_note: 'Дані аукціонних лотів на момент продажу. Пошкодження вказує аукціон, фактичний стан після ремонту може відрізнятися.' });
+Object.assign(D.ru, { auc_note: 'Данные аукционных лотов на момент продажи. Повреждения указывает аукцион, фактическое состояние после ремонта может отличаться.' });
+Object.assign(D.en, { auc_note: 'Auction lot data at the time of sale. Damage is as stated by the auction; condition after repair may differ.' });
