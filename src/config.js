@@ -3,7 +3,8 @@ export const cfg = {
   baseUrl: (process.env.BASE_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : '')).replace(/\/$/, ''),
   dbPath: process.env.DB_PATH || './data/vinscope.db',
   registryDbPath: process.env.REGISTRY_DB_PATH || (process.env.DB_PATH ? process.env.DB_PATH.replace(/[^/]*$/, 'registry.db') : './data/registry.db'),
-  registryFromYear: Number(process.env.REGISTRY_FROM_YEAR) || 2021,
+  registryFromYear: Number(process.env.REGISTRY_FROM_YEAR) || 2013, // с 2021 года архивы содержат VIN; 2013–2020 — только госномер
+  registryToYear: Number(process.env.REGISTRY_TO_YEAR) || 0,          // для тестов: ограничить годы и пропустить текущий CSV
   registryMaxGB: Number(process.env.REGISTRY_MAX_GB) || 3.5,
   stripeKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',

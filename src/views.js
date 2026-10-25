@@ -8,7 +8,7 @@ const fmt = (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const LANG_NAMES = { uk: 'Українська', ru: 'Русский', en: 'English' };
 const en = (lang, txt) => (lang === 'en' ? esc(txt) : `<span lang="en">${esc(txt)}</span>`); // англоязычный фрагмент внутри uk/ru-страницы
 const cut = (str, n = 160) => { const x = String(str); if (x.length <= n) return x; const y = x.slice(0, n - 1); return y.slice(0, y.lastIndexOf(' ')).replace(/[,;:—-]+$/, '') + '…'; };
-const nice = (str) => String(str || '').toLowerCase().split(/(\s+|-)/).map((w) => (/^\s+$|^-$/.test(w) || !w ? w : /\d/.test(w) || (w.length <= 3 && /^[a-z]+$/.test(w)) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join('');
+const nice = (str) => String(str || '').toLowerCase().split(/(\s+|-)/).map((w) => (/^\s+$|^-$/.test(w) || !w ? w : /\d/.test(w) || (w.length <= 3 && /^\p{L}+$/u.test(w)) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))).join('');
 const tel = (txt) => esc(txt).replace(/\b102\b/g, '<a href="tel:102">102</a>');
 // значения реестра МВС приходят украинскими заглавными: показываем на языке страницы
 const REG = {
@@ -19,7 +19,7 @@ const REG = {
     'БЕНЗИН': 'Petrol', 'ДИЗЕЛЬНЕ ПАЛИВО': 'Diesel', 'ЕЛЕКТРО': 'Electric', 'ЕЛЕКТРО АБО БЕНЗИН': 'Hybrid (electric/petrol)', 'ЕЛЕКТРО АБО ДИЗЕЛЬНЕ ПАЛИВО': 'Hybrid (electric/diesel)', 'БЕНЗИН АБО ГАЗ': 'Petrol/LPG', 'ГАЗ': 'LPG', 'ГАЗ АБО БЕНЗИН': 'LPG/petrol',
     'СЕДАН': 'Sedan', 'ХЕТЧБЕК': 'Hatchback', 'УНІВЕРСАЛ': 'Estate', 'ПОЗАШЛЯХОВИК': 'SUV', 'КУПЕ': 'Coupe', 'КАБРІОЛЕТ': 'Convertible', 'МІНІВЕН': 'Minivan', 'ПІКАП': 'Pickup', 'ЛІФТБЕК': 'Liftback', 'ФУРГОН': 'Van' },
 };
-const rv = (lang, v) => { const k = String(v || '').trim().toUpperCase(); return REG[lang]?.[k] || (lang === 'uk' ? k.charAt(0) + k.slice(1).toLowerCase() : k.charAt(0) + k.slice(1).toLowerCase()); };
+const rv = (lang, v) => { const k = String(v || '').trim().toUpperCase(); return REG[lang]?.[k] || REG[lang]?.[k.split('-')[0]] || (nice(k).charAt(0) + nice(k).slice(1)); };
 const engineText = (lang, e) => String(e || '').replace(/(\d+(?:\.\d+)?)L\b/, lang === 'en' ? '$1 L' : '$1 л').replace(/ cyl\b/, lang === 'en' ? ' cyl' : ' цил.').replace(/ hp\b/, lang === 'en' ? ' hp' : ' к.с.');
 const dateOf = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 
@@ -226,22 +226,29 @@ function uaSummary(lang, ua) {
   return `<div class="stats">${item(d.ua_records, s.records)}${item(d.ua_first, esc(s.first))}${item(d.ua_last, esc(s.last))}${item(d.ua_owners, s.owners)}${s.imported ? item(d.ua_imported, esc(s.imported.date)) : ''}${s.plates.length ? item(d.ua_plates, s.plates.slice(-2).map((x) => plateEl(x, true)).join(' ')) : ''}${s.deregistered ? item(d.ua_dereg, esc(s.deregistered.date)) : ''}</div>`;
 }
 
+function timeline(lang, rows, label) {
+  const d = dict(lang);
+  const isKey = (x) => ['import', 'first', 'owner', 'export', 'scrap', 'dereg'].includes(x.opkind);
+  const keyRows = rows.filter(isKey), other = rows.filter((x) => !isKey(x));
+  const row = (x) => `<tr class="k-${x.opkind}"><td data-l="${esc(d.tl_date)}">${esc(x.date)}</td><td data-l="${esc(d.tl_op)}"><span class="kb">${esc(d['k_' + x.opkind] || x.opkind)}</span> ${esc(x.opname || x.oper)}</td><td data-l="${esc(d.tl_dep)}" lang="uk">${esc((x.dep || '').replace(/^\d+ - /, ''))}</td><td data-l="${esc(d.tl_plate)}">${x.plate ? plateEl(x.plate, true) : ''}</td></tr>`;
+  const head = `<thead><tr><th scope="col">${esc(d.tl_date)}</th><th scope="col">${esc(d.tl_op)}</th><th scope="col">${esc(d.tl_dep)}</th><th scope="col">${esc(d.tl_plate)}</th></tr></thead>`;
+  const table = (list, cap) => `<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(cap)}"><table class="tl"><caption class="sr-only">${esc(cap)}</caption>${head}<tbody>${list.map(row).join('')}</tbody></table></div>`;
+  const main = keyRows.length ? keyRows : other;
+  const rest = keyRows.length ? other : [];
+  return `${table(main, label)}${rest.length ? `<details><summary>${esc(fmt(d.tl_others, { n: rest.length }))}</summary>${table(rest, d.more_ops)}</details>` : ''}`;
+}
+// «ВАЗ 21063» + «21063» -> не повторяем модель
+const brandModel = (b, m) => { const B = String(b || '').trim(), M = String(m || '').trim(); return !M || B.toUpperCase().includes(M.toUpperCase()) ? nice(B) : `${nice(B)} ${nice(M)}`; };
+
 function uaBlock(lang, r, full) {
   const d = dict(lang); const ua = r.ua; const cov = r.coverage.registry;
   const covTxt = cov.from ? fmt(d.ua_cov, { from: cov.from, to: cov.to }) : '';
   if (!ua.rows.length) {
     return `<section class="panel" aria-labelledby="h-ua"><h2 id="h-ua">${esc(d.ua_h)}</h2>${cov.ready ? `<div class="notice">${esc(fmt(d.ua_notchecked, { from: cov.from, to: cov.to }))}</div><p>${esc(d.ua_none)}</p><p class="muted sm">${esc(fmt(d.ua_none_p, { from: cov.from, to: cov.to }))}</p>` : `<p class="muted">${esc(d.ua_notready)}</p>`}${cov.indexing && cov.ready ? `<p class="muted sm">${esc(d.ua_indexing)}</p>` : ''}</section>`;
   }
-  let tl = '';
-  if (full) {
-    const isKey = (x) => ['import', 'first', 'owner', 'export', 'scrap', 'dereg'].includes(x.opkind);
-    const keyRows = ua.rows.filter(isKey), other = ua.rows.filter((x) => !isKey(x));
-    const row = (x) => `<tr class="k-${x.opkind}"><td data-l="${esc(d.tl_date)}">${esc(x.date)}</td><td data-l="${esc(d.tl_op)}"><span class="kb">${esc(d['k_' + x.opkind] || x.opkind)}</span> ${esc(x.opname || x.oper)}</td><td data-l="${esc(d.tl_dep)}" lang="uk">${esc((x.dep || '').replace(/^\d+ - /, ''))}</td><td data-l="${esc(d.tl_plate)}">${x.plate ? plateEl(x.plate, true) : ''}</td></tr>`;
-    const head = `<thead><tr><th scope="col">${esc(d.tl_date)}</th><th scope="col">${esc(d.tl_op)}</th><th scope="col">${esc(d.tl_dep)}</th><th scope="col">${esc(d.tl_plate)}</th></tr></thead>`;
-    tl = `<div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.ua_h)}"><table class="tl"><caption class="sr-only">${esc(d.ua_h)}</caption>${head}<tbody>${keyRows.map(row).join('')}</tbody></table></div>${other.length ? `<details><summary>${esc(fmt(d.tl_others, { n: other.length }))}</summary><div class="tablewrap" tabindex="0" role="region" aria-label="${esc(d.more_ops)}"><table class="tl"><caption class="sr-only">${esc(d.more_ops)}</caption>${head}<tbody>${other.map(row).join('')}</tbody></table></div></details>` : ''}`;
-  }
+  const tl = full ? timeline(lang, ua.rows, d.ua_h) : '';
   const v = ua.summary.vehicle;
-  const line = [nice(v.brand), nice(v.model), v.year, v.color && rv(lang, v.color), v.fuel && rv(lang, v.fuel), v.cap ? `${v.cap} ${d.cm3}` : ''].filter(Boolean).join(' · ');
+  const line = [brandModel(v.brand, v.model), v.year, v.color && rv(lang, v.color), v.fuel && rv(lang, v.fuel), v.cap ? `${v.cap} ${d.cm3}` : ''].filter(Boolean).join(' · ');
   return `<section class="panel" aria-labelledby="h-ua"><h2 id="h-ua">${esc(d.ua_h)}</h2>${line ? `<p class="vehline">${esc(line)}</p>` : ''}${uaSummary(lang, ua)}${tl}<p class="muted sm">${esc(covTxt)}${cov.indexing ? ' · ' + esc(d.ua_indexing) : ''}</p></section>`;
 }
 
@@ -291,7 +298,7 @@ function usaBlock(lang, r) {
 const vehicleTitle = (r, fallback) => {
   const x = r.decoded; const v = r.ua?.summary?.vehicle;
   if (x?.trusted) return `${nice(x.make)} ${nice(x.model)}, ${x.year}`;
-  if (v?.brand) return `${[nice(v.brand), nice(v.model)].filter(Boolean).join(' ')}${v.year ? ', ' + v.year : ''}`;
+  if (v?.brand) return `${brandModel(v.brand, v.model)}${v.year ? ', ' + v.year : ''}`;
   return x?.make ? nice(x.make) : fallback;
 };
 function photoFigure(lang, r) {
@@ -336,14 +343,20 @@ function tiles(lang, r) {
 
 const actionsBlock = (lang) => `<div class="panel actions-panel noprint"><h2>${esc(t(lang, 'print_h'))}</h2><div class="actions"><button class="btn ghost" type="button" data-print>${esc(t(lang, 'print'))}</button><button class="btn ghost" type="button" id="share" data-ok="${esc(t(lang, 'copied_ok'))}">${esc(t(lang, 'share'))}</button></div><p class="muted sm" style="margin:12px 0 0">${esc(t(lang, 'share_note'))}</p></div>`;
 
-export function checkPage(req, lang, r, { full = false, fromPlate = '' } = {}) {
+function earlyPlateBlock(lang, plate, early) {
+  if (!early?.length) return '';
+  const d = dict(lang);
+  return `<section class="panel" aria-labelledby="h-early"><h2 id="h-early">${esc(fmt(d.plate_early_h, { plate }))}</h2><p class="muted sm">${esc(d.plate_early_note)}</p>${early.map((g) => timeline(lang, g.rows, d.plate_h)).join('')}</section>`;
+}
+
+export function checkPage(req, lang, r, { full = false, fromPlate = '', early = [] } = {}) {
   const d = dict(lang);
   const title = vehicleTitle(r, r.vin);
   const hit = r.wanted.length > 0;
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const main = full
-    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const aside = full
     ? `${actionsBlock(lang)}${waitlistBox(lang)}`
@@ -351,6 +364,34 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '' } = {}) {
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
+}
+
+export function plateReport(req, lang, plate, hist, pcov, wanted) {
+  const d = dict(lang);
+  const g0 = hist.groups[0];
+  const v = g0?.summary.vehicle;
+  const sub = v ? `${brandModel(v.brand, v.model)}${v.year ? ', ' + v.year : ''}` : '';
+  const yr = (x) => String(x || '').slice(0, 4);
+  const hit = wanted.length > 0;
+  const tile = ([cls, icon, txt], label) => `<li class="tile ${cls}"><span class="ic">${icon}</span><div><small>${esc(label)}</small><b>${esc(txt)}</b></div></li>`;
+  const tilesHtml = `<div class="wrap"><ul class="tiles three" role="list">${tile(hit ? ['bad', tileIc.bad, d.t_wanted_hit] : ['ok', tileIc.ok, d.t_wanted_ok], d.wanted_h)}${tile(['ok', tileIc.doc, plural(lang, hist.rows.length, d.t_reg_n)], fmt(d.t_plate_reg, { from: yr(pcov.from), to: yr(pcov.to) }))}${tile(['na', tileIc.na, d.t_vin_none], d.t_vin)}</ul></div>`;
+  const wantedHtml = hit
+    ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(q.unit)}</dd></dl>`).join('')}</section>`
+    : `<section class="panel"><h2>${esc(d.wanted_h)}</h2><p class="good">${ic.check}<span>${esc(d.wanted_none)}</span></p></section>`;
+  const groupsHtml = hist.groups.map((g, i) => {
+    const gv = g.summary.vehicle;
+    const title = `${brandModel(gv.brand, gv.model)}${gv.year ? ', ' + gv.year : ''}`;
+    const line = [gv.color && rv(lang, gv.color), gv.fuel && rv(lang, gv.fuel), gv.body && rv(lang, gv.body), gv.cap ? `${gv.cap} ${d.cm3}` : ''].filter(Boolean).join(' · ');
+    return `<section class="panel" aria-labelledby="h-g${i}"><h2 id="h-g${i}">${esc(title)}</h2>${line ? `<p class="vehline">${esc(line)}</p>` : ''}${uaSummary(lang, g)}${timeline(lang, g.rows, title)}</section>`;
+  }).join('');
+  const next = hit ? d.c_wanted : [d.plate_vin_hint, ...d.c_default];
+  const main = `${wantedHtml}<section class="panel" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ul class="check tight">${next.map((x) => `<li>${ic.check}<span>${tel(x)}</span></li>`).join('')}</ul></section>
+<div class="notice info">${esc(fmt(d.plate_note, { from: pcov.from || '—', to: pcov.to || '—' }))}${hist.groups.length > 1 ? ` <b>${esc(plural(lang, hist.groups.length, d.plate_groups))}.</b>` : ''}</div>${groupsHtml}
+${searchForm(lang, '', false, 'b')}<p class="muted sm">${esc(d.sources_note)}</p>`;
+  const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
+<div class="vehicle solo"><div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
+<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
+  return layout(req, lang, { title: `${plate} — ${d.plate_h} | VINScope`, desc: d.plate_h, path: '/check', body, noindex: true });
 }
 
 export function plateNotFound(req, lang, plate, cov, wanted) {

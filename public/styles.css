@@ -296,3 +296,9 @@ tr.k-owner .kb{background:#dbeafe;color:#1e3a8a}
 @media(max-height:480px) and (orientation:landscape){.vehicle{grid-template-columns:260px 1fr}.photo{max-width:260px}.hero.result .wrap{padding-bottom:76px}}
 a[href^="tel:"]{display:inline-block;padding:4px 3px;font-weight:800}
 .nf-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;margin-top:20px}.nf-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}
+/* страница истории по номеру */
+.tiles.three{grid-template-columns:repeat(3,1fr)}
+h1.platebig .plate{font-size:clamp(28px,5vw,44px);border-width:3px;border-radius:12px}h1.platebig .plate span{padding:8px 18px}h1.platebig .plate i{font-size:11px;padding:6px 8px}
+.plate-sub{font-size:clamp(18px,2.4vw,24px);font-weight:700;color:#dbe7ff;margin:14px 0 0}
+.notice.info b{color:var(--ink)}
+@media(max-width:640px){.tiles.three{grid-template-columns:1fr 1fr}.tiles.three .tile:first-child{grid-column:1/-1}}

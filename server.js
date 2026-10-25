@@ -9,7 +9,7 @@ import { validateVin } from './src/vin.js';
 import { normalizePlate, looksLikePlate } from './src/plate.js';
 import { buildReport } from './src/report.js';
 import { startWanted, wantedByPlate, state as wantedState } from './src/wanted.js';
-import { startRegistry, vinsByPlate, coverage, status as regStatus } from './src/registry.js';
+import { startRegistry, vinsByPlate, historyByPlate, coverage, plateCoverage, totalCoverage, status as regStatus } from './src/registry.js';
 import { ipOf, limited, origin, send, json, redirect, readBody, serveStatic } from './src/http.js';
 import * as store from './src/db.js';
 import * as stripe from './src/stripe.js';
@@ -110,7 +110,8 @@ async function api(req, res, url) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const c = coverage();
-    return json(req, res, 200, { wanted: { loaded: wantedState.loaded, count: wantedState.count, updatedAt: wantedState.updatedAt }, registry: { from: c.from, to: c.to, records: c.records, indexing: c.indexing, ready: c.ready }, paywall: paywallOn() });
+    const pc = plateCoverage();
+    return json(req, res, 200, { wanted: { loaded: wantedState.loaded, count: wantedState.count, updatedAt: wantedState.updatedAt }, registry: { from: c.from, to: c.to, records: c.records, indexing: c.indexing, ready: c.ready }, plateArchive: { from: pc.from, to: pc.to, records: pc.records }, paywall: paywallOn() });
   }
   if (req.method === 'GET' && url.pathname.startsWith('/api/vin/')) {
     const lg = LANGS.includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'uk';
@@ -128,7 +129,7 @@ async function page(req, res, url, lang, rest) {
   const html = (s, code = 200, cache = 'public, max-age=300', extra = {}) => send(req, res, code, s, 'text/html; charset=utf-8', { 'cache-control': cache, ...extra });
   const priv = (s, code = 200) => html(s, code, 'private, no-store', { ...NOINDEX, 'referrer-policy': 'no-referrer' });
   if (rest === '/') {
-    const stats = { wantedCount: wantedState.count, wantedUpdatedAt: wantedState.updatedAt, registryRecords: coverage().records };
+    const stats = { wantedCount: wantedState.count, wantedUpdatedAt: wantedState.updatedAt, registryRecords: totalCoverage().records };
     const q = (url.searchParams.get('q') || '').slice(0, 40);
     if (q) return html(V.home(req, lang, stats, { q, err: url.searchParams.get('e') || 'bad' }), 200, 'private, no-store', NOINDEX);
     return html(V.home(req, lang, stats));
@@ -147,14 +148,24 @@ async function page(req, res, url, lang, rest) {
     if (v.ok) {
       store.logSearch(v.vin, lang);
       const r = await buildReport(v.vin);
-      return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: url.searchParams.get('p') || '' }));
+      // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
+      const fromPlate = normalizePlate(url.searchParams.get('p') || '');
+      let early = [];
+      if (fromPlate && looksLikePlate(fromPlate)) {
+        const veh = r.ua.summary?.vehicle || {};
+        const b4 = (x) => String(x || '').toUpperCase().replace(/[^A-ZА-ЯІЇЄҐ]/g, '').slice(0, 3);
+        early = historyByPlate(fromPlate).groups.filter((g) => b4(g.summary.vehicle.brand) === b4(veh.brand) && (!veh.year || !g.summary.vehicle.year || veh.year === g.summary.vehicle.year));
+      }
+      return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early }));
     }
     const plate = normalizePlate(raw);
     if (!looksLikePlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);
     store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
-    return priv(V.plateNotFound(req, lang, plate, coverage(), wantedByPlate(plate)));
+    const hist = historyByPlate(plate);
+    if (hist.rows.length) return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate)));
+    return priv(V.plateNotFound(req, lang, plate, totalCoverage(), wantedByPlate(plate)));
   }
   if (rest === '/checkout') {
     const vin = (url.searchParams.get('vin') || '').toUpperCase().slice(0, 23);

@@ -388,3 +388,27 @@ D.ru.home_desc = 'Бесплатная проверка авто в розыск
 Object.assign(D.uk, { report_ready: 'Звіт готовий', report_wait: 'Звіт ще формується. Оновіть сторінку трохи згодом.' });
 Object.assign(D.ru, { report_ready: 'Отчёт готов', report_wait: 'Отчёт ещё формируется. Обновите страницу чуть позже.' });
 Object.assign(D.en, { report_ready: 'The report is ready', report_wait: 'The report is still being prepared. Please refresh in a moment.' });
+
+// ---------- История по госномеру (архивы 2013–2020 без VIN) ----------
+Object.assign(D.uk, {
+  plate_h: 'Історія за номером', plate_note: 'У відкритих архівах МВС за {from} — {to} VIN не публікувався, тому історію показуємо за номером. Номер міг належати різним авто: записи згруповано за маркою, моделлю та роком.',
+  plate_groups: ['{n} авто за цим номером', '{n} авто за цим номером', '{n} авто за цим номером'], t_plate_reg: 'Архів МВС {from}–{to}', t_vin: 'VIN', t_vin_none: 'Не опубліковано',
+  plate_vin_hint: 'Для повної перевірки (розшук за VIN, відкликання, звірка) введіть VIN: він є у свідоцтві про реєстрацію та на кузові.',
+  plate_early_h: 'Раніші записи за номером {plate} (без VIN)', plate_early_note: 'Записи з архівів МВС до 2021 року, де VIN не публікувався. Показано лише записи, що збігаються з цим авто за маркою та роком.',
+});
+Object.assign(D.ru, {
+  plate_h: 'История по номеру', plate_note: 'В открытых архивах МВД за {from} — {to} VIN не публиковался, поэтому историю показываем по номеру. Номер мог принадлежать разным авто: записи сгруппированы по марке, модели и году.',
+  plate_groups: ['{n} авто с этим номером', '{n} авто с этим номером', '{n} авто с этим номером'], t_plate_reg: 'Архив МВД {from}–{to}', t_vin: 'VIN', t_vin_none: 'Не опубликован',
+  plate_vin_hint: 'Для полной проверки (розыск по VIN, отзывы, сверка) введите VIN: он есть в свидетельстве о регистрации и на кузове.',
+  plate_early_h: 'Более ранние записи по номеру {plate} (без VIN)', plate_early_note: 'Записи из архивов МВД до 2021 года, где VIN не публиковался. Показаны только записи, совпадающие с этим авто по марке и году.',
+});
+Object.assign(D.en, {
+  plate_h: 'History by plate', plate_note: 'The MIA archives for {from} — {to} were published without VINs, so we show the history by plate. A plate may have belonged to different cars: records are grouped by make, model and year.',
+  plate_groups: ['{n} car with this plate', '{n} cars with this plate', '{n} cars with this plate'], t_plate_reg: 'MIA archive {from}–{to}', t_vin: 'VIN', t_vin_none: 'Not published',
+  plate_vin_hint: 'For a full check (wanted list by VIN, recalls, cross-check) enter the VIN: it is in the registration certificate and on the body.',
+  plate_early_h: 'Earlier records for plate {plate} (no VIN)', plate_early_note: 'Records from MIA archives before 2021, published without VINs. Only records matching this car by make and year are shown.',
+});
+
+Object.assign(D.uk, { share_note: 'Посилання постійне й відкривається в будь-кого, хто його має.' });
+Object.assign(D.ru, { share_note: 'Ссылка постоянная и открывается у любого, кто её получил.' });
+Object.assign(D.en, { share_note: 'The link is permanent and opens for anyone who has it.' });

@@ -6,9 +6,9 @@ import { parseLine, detectDelimiter } from './csv.js';
 import { unzipFirstEntry } from './zipstream.js';
 import { normalizeVin } from './vin.js';
 import { normalizePlate } from './plate.js';
-import { SCHEMA } from './registry-schema.js';
+import { SCHEMA, migrate } from './registry-schema.js';
 
-const { dbPath, fromYear, maxBytes } = workerData;
+const { dbPath, fromYear, toYear, maxBytes } = workerData;
 const UA = { 'user-agent': 'Mozilla/5.0 (compatible; VINScope/1.0)' };
 const PKG_ZIP = '06779371-308f-42d7-895e-5a39833375f0';   // «Відомості про ТЗ та їх власників» (архіви по роках)
 const PKG_CUR = '348dbb24-a545-4d8c-95d5-18d35c593ca1';   // «Інформація про зареєстровані ТЗ (VIN)» (поточний рік)
@@ -47,9 +47,9 @@ const parseDate = (s) => {
 
 async function main() {
   const db = new DatabaseSync(dbPath);
-  db.exec(SCHEMA);
+  db.exec(SCHEMA); migrate(db);
   // хвосты оборванных загрузок (процесс убили посреди импорта): удаляем недогруженные источники и их строки
-  db.exec('DELETE FROM reg WHERE src IN (SELECT id FROM sources WHERE done=0); DELETE FROM sources WHERE done=0;');
+  db.exec('DELETE FROM reg WHERE src IN (SELECT id FROM sources WHERE done=0); DELETE FROM regp WHERE src IN (SELECT id FROM sources WHERE done=0); DELETE FROM sources WHERE done=0;');
   const dict = new Map(db.prepare('SELECT v,id FROM dict').all().map((r) => [r.v, r.id]));
   const insDict = db.prepare('INSERT OR IGNORE INTO dict(v) VALUES(?)');
   const getDict = db.prepare('SELECT id FROM dict WHERE v=?');
@@ -60,15 +60,17 @@ async function main() {
     return id;
   };
   const insOp = db.prepare('INSERT OR IGNORE INTO ops(code,name) VALUES(?,?)');
+  const insPlate = db.prepare('INSERT INTO regp(plate,d,oper,brand,model,year,color,body,fuel,cap,dep,src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
+  const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim();
   const insReg = db.prepare('INSERT INTO reg(vin,d,oper,brand,model,year,color,kind,body,fuel,cap,dep,plate,person,src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
 
   const sources = [];
   const cur = await ckan(PKG_CUR);
-  for (const r of cur.filter((x) => /\.csv/i.test(x.format || '') || /csv$/i.test(x.url))) sources.push({ key: r.id, name: 'registeredVehicles (' + (r.last_modified || '').slice(0, 10) + ')', url: r.url, kind: 'csv', modified: r.last_modified || '', year: 9999 });
+  if (!toYear) for (const r of cur.filter((x) => /\.csv/i.test(x.format || '') || /csv$/i.test(x.url))) sources.push({ key: r.id, name: 'registeredVehicles (' + (r.last_modified || '').slice(0, 10) + ')', url: r.url, kind: 'csv', modified: r.last_modified || '', year: 9999 });
   const curYear = new Date().getFullYear();
   for (const r of await ckan(PKG_ZIP)) {
     const y = +(/(\d{4})/.exec(r.name || '')?.[1] || 0);
-    if (y < fromYear || !/zip/i.test(r.format || r.url)) continue;
+    if (y < fromYear || (toYear && y > toYear) || !/zip/i.test(r.format || r.url)) continue;
     if (y === curYear && sources.length) continue; // текущий год покрывает CSV (новее)
     sources.push({ key: r.id, name: r.name, url: r.url, kind: 'zip', modified: r.last_modified || '', year: y });
   }
@@ -92,7 +94,7 @@ async function main() {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       idle = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => ac.abort(), 120000); }; idle();
       const stream = s.kind === 'zip' ? unzipFirstEntry(res.body) : (await import('node:stream')).Readable.fromWeb(res.body);
-      const dec = new TextDecoder('utf-8'); let tail = '', header = null, delim = ';', idx = {}, n = 0, dmin = 99999999, dmax = 0;
+      const dec = new TextDecoder('utf-8'); let tail = '', header = null, delim = ';', idx = {}, n = 0, dmin = 99999999, dmax = 0, plateMode = false;
       db.exec('BEGIN');
       const handle = (line) => {
         if (!line) return;
@@ -102,20 +104,25 @@ async function main() {
           const f = (...names) => { for (const nm of names) { const i = header.indexOf(nm); if (i >= 0) return i; } return -1; };
           idx = { vin: f('vin'), code: f('oper_code', 'opercodeoperas'), name: f('oper_name'), combined: header.findIndex((h) => h.includes('oper_code') && h.includes('||')), d: f('d_reg', 'dreg'), dep: f('dep'), brand: f('brand'), model: f('model'), year: f('make_year', 'makeyear'), color: f('color'), kind: f('kind'), body: f('body'), fuel: f('fuel'), cap: f('capacity'), plate: f('n_reg_new'), person: f('person') };
           if (idx.code < 0 && idx.combined >= 0) idx.code = idx.combined;
-          if (idx.vin < 0 || idx.d < 0) throw new Error('unexpected header: ' + header.join(','));
+          plateMode = idx.vin < 0 && idx.plate >= 0; // архивы до 2021 года: VIN нет, есть номер
+          if ((idx.vin < 0 && !plateMode) || idx.d < 0) throw new Error('unexpected header: ' + header.join(','));
           return;
         }
         const c = parseLine(line, delim);
-        const vin = normalizeVin(c[idx.vin]); if (vin.length < 5) return;
+        const vin = plateMode ? '' : normalizeVin(c[idx.vin]); if (!plateMode && vin.length < 5) return;
         const d = parseDate(c[idx.d]); if (!d) return;
         let code = null, oname = idx.name >= 0 ? c[idx.name] : '';
         const raw = idx.code >= 0 ? c[idx.code] : '';
         const m = /^\s*(\d+)\s*(?:-\s*(.*))?$/.exec(raw || '');
         if (m) { code = +m[1]; if (m[2]) oname = m[2]; }
+        oname = String(oname || '').replace(/^\s*\d+\s*-\s*/, '');
         if (code !== null && oname) insOp.run(code, oname.trim());
         const plate = idx.plate >= 0 && c[idx.plate] ? normalizePlate(c[idx.plate]) : null;
         const num = (i) => (i >= 0 && c[i] && !Number.isNaN(+c[i]) ? +c[i] : null);
-        insReg.run(vin, d, code, D(c[idx.brand]), D(c[idx.model]), num(idx.year), D(c[idx.color]), D(c[idx.kind]), D(c[idx.body]), D(c[idx.fuel]), num(idx.cap), D(c[idx.dep]), plate, null, id); // person (физлицо/юрлицо) намеренно не сохраняем
+        if (plateMode) {
+          if (!plate || plate.length < 4) return;
+          insPlate.run(plate, d, code, D(clean(c[idx.brand])), D(clean(c[idx.model])), num(idx.year), D(clean(c[idx.color])), D(clean(c[idx.body])), D(clean(c[idx.fuel])), num(idx.cap), D(clean(c[idx.dep])), id);
+        } else insReg.run(vin, d, code, D(clean(c[idx.brand])), D(clean(c[idx.model])), num(idx.year), D(clean(c[idx.color])), D(clean(c[idx.kind])), D(clean(c[idx.body])), D(clean(c[idx.fuel])), num(idx.cap), D(clean(c[idx.dep])), plate, null, id); // person (физлицо/юрлицо) намеренно не сохраняем
         if (d < dmin) dmin = d; if (d > dmax) dmax = d;
         if (++n % 50000 === 0) {
           db.exec('COMMIT'); db.exec('BEGIN'); say({ type: 'progress', name: s.name, rows: n });
@@ -135,14 +142,14 @@ async function main() {
       db.exec('COMMIT');
       clearTimeout(idleTimer);
       db.exec('BEGIN');
-      if (row) { db.prepare('DELETE FROM reg WHERE src=?').run(row.id); db.prepare('DELETE FROM sources WHERE id=?').run(row.id); }
-      db.prepare('UPDATE sources SET key=?, done=1, rows=?, dmin=?, dmax=?, updated_at=? WHERE id=?').run(s.key, n, dmin, dmax, new Date().toISOString(), id);
+      if (row) { db.prepare('DELETE FROM reg WHERE src=?').run(row.id); db.prepare('DELETE FROM regp WHERE src=?').run(row.id); db.prepare('DELETE FROM sources WHERE id=?').run(row.id); }
+      db.prepare('UPDATE sources SET key=?, done=1, rows=?, dmin=?, dmax=?, updated_at=?, kind=? WHERE id=?').run(s.key, n, dmin, dmax, new Date().toISOString(), plateMode ? 'plate' : 'vin', id);
       db.exec('COMMIT');
       say({ type: 'done', name: s.name, rows: n });
     } catch (e) {
       clearTimeout(idleTimer);
       try { db.exec('ROLLBACK'); } catch { /* not in tx */ }
-      try { db.prepare('DELETE FROM reg WHERE src=?').run(id); db.prepare('DELETE FROM sources WHERE id=?').run(id); } catch { /* чистка временных строк */ }
+      try { db.prepare('DELETE FROM reg WHERE src=?').run(id); db.prepare('DELETE FROM regp WHERE src=?').run(id); db.prepare('DELETE FROM sources WHERE id=?').run(id); } catch { /* чистка временных строк */ }
       say({ type: 'error', name: s.name, msg: e.message });
     }
   }
