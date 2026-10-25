@@ -629,3 +629,9 @@ for (const [l, sec, t3] of [
 Object.assign(D.uk, { co_fx: 'Оплата пройде у валюті платіжного сервісу: ≈ {sum} за курсом НБУ (банк може додати комісію за конвертацію).' });
 Object.assign(D.ru, { co_fx: 'Оплата пройдёт в валюте платёжного сервиса: ≈ {sum} по курсу НБУ (банк может добавить комиссию за конвертацию).' });
 Object.assign(D.en, { co_fx: 'You will be charged in the payment provider’s currency: ≈ {sum} at the NBU rate (your bank may add a conversion fee).' });
+// оплата: нейтрально к провайдеру (monobank / Lemon Squeezy / Stripe)
+for (const [l, paid, priv] of [
+  ['uk', 'Платні тарифи — разова оплата. Якщо за VIN не знайдено жодних даних, кошти повертаються автоматично.', 'Ми зберігаємо запити (VIN або номер, мову, дату) до 90 днів, email — лише якщо ви його вказали (для листа про запуск чи замовлення), та технічні дані для захисту від зловживань. Оплату приймає платіжний провайдер, дані вашої картки нам недоступні.'],
+  ['ru', 'Платные тарифы — разовая оплата. Если по VIN не найдено никаких данных, деньги возвращаются автоматически.', 'Мы храним запросы (VIN или номер, язык, дату) до 90 дней, email — только если вы его указали (для письма о запуске или заказа), и технические данные для защиты от злоупотреблений. Оплату принимает платёжный провайдер, данные вашей карты нам недоступны.'],
+  ['en', 'Paid plans are a one-time payment. If no data is found for the VIN, the payment is refunded automatically.', 'We keep queries (VIN or plate, language, date) for up to 90 days, your email only if you provide it (for the launch email or your order), and technical data to prevent abuse. Payments are handled by a payment provider; we have no access to your card details.'],
+]) { D[l].terms[2] = paid; D[l].terms[3] = priv; }

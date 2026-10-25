@@ -384,3 +384,10 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
 .lotphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 8px}.lotphotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
 .paidteaser{border:2px solid var(--amber);background:linear-gradient(180deg,color-mix(in srgb,var(--amber) 8%,var(--surface)),var(--surface))}.paidteaser .btn{margin-top:14px}
 .panel details.why>summary{display:inline-flex;align-items:center;min-height:44px}
+/* PDF для продавца/клиента: без простыни отзывов, без «висящих» заголовков разделов */
+@media print{
+  .grp{break-after:avoid;break-inside:avoid;margin-top:18px}
+  .panel[aria-labelledby="h-safe"]{break-inside:auto}.panel[aria-labelledby="h-safe"] details{display:none!important}
+  .panel[aria-labelledby="h-safe"] .recalls li{break-inside:avoid}
+  .two{display:block}.two>aside{display:none}
+}
