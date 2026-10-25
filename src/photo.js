@@ -20,7 +20,7 @@ export function brandNames(make) {
   const raw = String(make || '').toUpperCase().replace(/[()]/g, ' ').split(/[\s/,]+/).filter((w) => w.length > 1);
   const out = [];
   for (const w of raw) out.push(BRAND[w] || (/[А-ЯІЇЄҐ]/.test(w) ? translit(w) : w));
-  return [...new Set(out.map((x) => x.toLowerCase()))].slice(0, 3);
+  return [...new Set(out.map((x) => x.toLowerCase().replace(/[_-]+/g, ' ')))].slice(0, 3);
 }
 // «21063» -> ['21063', '2106']; «Accord Sedan» -> ['accord sedan', 'accord']
 export function modelNames(model) {
@@ -29,7 +29,7 @@ export function modelNames(model) {
   const first = m.split(/[\s/,]+/)[0];
   const out = [m, first];
   if (/^\d{5,}$/.test(first)) out.push(first.slice(0, 4));
-  return [...new Set(out.map((x) => (/[а-яіїєґ]/i.test(x) ? translit(x) : x)))];
+  return [...new Set(out.map((x) => (/[а-яіїєґ]/i.test(x) ? translit(x) : x).replace(/[_-]+/g, ' ')))];
 }
 
 const BAD = /\b(interior|innen|dashboard|cockpit|engine|motor|badge|logo|emblem|wheel|rim|seat|trunk|boot|detail|tail ?light|headlight|steering|gauge|instrument|key|wreck|crash|damaged|toy|model ?car|diecast|scale|lego|brochure|ad\b|poster|stamp|police|taxi)\b/i;
@@ -89,7 +89,7 @@ async function commons(q) {
 export async function getPhoto(make, model, year) {
   if (!make) return null;
   const y = Number(year) || null;
-  const key = `v2|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
+  const key = `v3|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);

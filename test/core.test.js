@@ -148,3 +148,9 @@ test('фото: без точной модели берём любое фото 
   assert.equal(pickFile([pg('2019 Honda Accord LX.jpg', 1)], { make: 'HONDA', model: 'Accord', year: null }).title, '2019 Honda Accord LX.jpg');
   assert.equal(pickFile([pg('Honda Civic in Kyiv.jpg', 1)], { make: 'HONDA', model: '', year: null }).title, 'Honda Civic in Kyiv.jpg');
 });
+
+test('фото: марки и модели через дефис (Mercedes-Benz S-Class)', async () => {
+  const { pickFile } = await import('../src/photo.js');
+  const pg = (title) => ({ title: 'File:' + title, index: 1, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/a.jpg', thumbwidth: 960 }] });
+  assert.ok(pickFile([pg('2007 Mercedes-Benz S-Class (W221) S 350.jpg')], { make: 'MERCEDES-BENZ', model: 'S-Class', year: 2007 }));
+});
