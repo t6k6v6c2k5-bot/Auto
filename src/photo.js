@@ -89,7 +89,7 @@ async function commons(q) {
 export async function getPhoto(make, model, year) {
   if (!make) return null;
   const y = Number(year) || null;
-  const key = `${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
+  const key = `v2|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);
