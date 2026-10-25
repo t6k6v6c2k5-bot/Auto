@@ -3,6 +3,8 @@ import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
 import { nbuRate } from './src/nbu.js';
+import { getPhoto } from './src/photo.js';
+const within = (p, ms) => Promise.race([p.catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))]);
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -145,7 +147,7 @@ async function page(req, res, url, lang, rest) {
   }
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
-  if (rest === '/sources') return html(V.sourcesPage(req, lang));
+  if (rest === '/sources') return redirect(res, `/${lang}/`, 301);
   if (rest === '/terms') return html(V.termsPage(req, lang));
   if (rest === '/wanted' || rest === '/plate') return html(V.landingPage(req, lang, rest.slice(1)));
 
@@ -176,9 +178,16 @@ async function page(req, res, url, lang, rest) {
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
     const hist = historyByPlate(plate);
-    if (hist.rows.length) return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate)));
+    if (hist.rows.length) {
+      const v0 = hist.groups[0]?.summary.vehicle || {};
+      const photo = v0.brand ? await within(getPhoto(v0.brand, v0.model, v0.year), 5000) : null;
+      return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate), photo));
+    }
     const nl = await lookupPlate(plate);
-    if (nl) return priv(V.rdwReport(req, lang, plate, nl, wantedByPlate(plate)));
+    if (nl) {
+      nl.photo = await within(getPhoto(nl.brand, nl.model, Number(String(nl.firstAdmission).slice(0, 4)) || null), 5000);
+      return priv(V.rdwReport(req, lang, plate, nl, wantedByPlate(plate)));
+    }
     return priv(V.plateNotFound(req, lang, plate, totalCoverage(), wantedByPlate(plate)));
   }
   if (rest === '/checkout') {
@@ -214,7 +223,7 @@ async function page(req, res, url, lang, rest) {
 // Дата последнего изменения контента — для sitemap
 const LASTMOD = new Date(Math.max(...['src/i18n.js', 'src/views.js'].map((f) => statSync(join(ROOT, f)).mtimeMs))).toISOString().slice(0, 10);
 function sitemap(req) {
-  const base = origin(req); const paths = ['/', '/tools', ...TOOLS.map((t) => '/tools/' + t), '/wanted', '/plate', '/usa', '/sources', '/pricing', '/terms'];
+  const base = origin(req); const paths = ['/', '/tools', ...TOOLS.map((t) => '/tools/' + t), '/wanted', '/plate', '/usa', '/pricing', '/terms'];
   const loc = (l, p) => `${base}/${l}${p === '/' ? '/' : p}`;
   const urls = paths.flatMap((p) => LANGS.map((l) => `<url><loc>${loc(l, p)}</loc><lastmod>${LASTMOD}</lastmod>${LANGS.map((a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${loc(a, p)}"/>`).join('')}<xhtml:link rel="alternate" hreflang="x-default" href="${loc('uk', p)}"/></url>`));
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join('')}</urlset>`;

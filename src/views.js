@@ -44,7 +44,7 @@ const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : 
 export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '' }) {
   const alt = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(abs(req, '/' + l + path))}">`).join('');
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, '\\u003c')}</script>`).join('');
-  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
+  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
   const cur = (p) => (path === p || (p === '/tools' && path.startsWith('/tools/')) ? ' aria-current="page"' : '');
   const og = abs(req, `/og-${lang}.png`);
   const url = abs(req, '/' + lang + path);
@@ -69,7 +69,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 </div></header>
 <main id="main" tabindex="-1">${body}</main>
 <footer><div class="wrap foot"><div>${logo}<b>VINScope</b><p>${esc(t(lang, 'footer'))}</p></div>
-<div><p class="foot-h">${esc(t(lang, 'nav_sources'))}</p>${t(lang, 'srcs').slice(0, 4).map(([n, , u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n.split(' — ')[0])}<span class="sr-only"> ${esc(t(lang, 'ext_new_tab'))}</span></a>`).join('')}<a href="/${lang}/sources">${esc(t(lang, 'src_all'))}</a></div>
+
 <div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
@@ -133,12 +133,11 @@ ${searchForm(lang, opts.q || '', true, 'a', opts.err || '')}
 <div class="visual" aria-hidden="true">${carSvg()}
 ${chip('c1', ['g', '<path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>'], d.t_wanted_ok, d.wanted_h)}
 ${chip('c2', ['b', '<path d="M5 7h14M5 12h14M5 17h9"/>'], d.t_reg, `${d.ua_owners} · ${d.ua_imported}`)}
-${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'], `${d.risk_h} 0–100`, 'NHTSA')}</div>
+${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'], `${d.risk_h} 0–100`, d.trust3)}</div>
 </div></section>
 <section class="sec" id="what"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
 <section class="sec alt"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
 ${toolsHomeBlock(lang)}${diffBlock(lang)}
-<section class="sec alt"><div class="wrap narrow"><h2 class="reveal">${esc(d.src_h)}</h2><p class="sec-sub">${esc(d.src_p)}</p>${sourcesList(lang)}<p class="center" style="margin-top:18px"><a href="/${lang}/sources">${esc(t(lang, 'src_all'))}</a></p></div></section>
 <section class="sec"><div class="wrap narrow"><h2 class="reveal">${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
 <section class="sec cta"><div class="wrap narrow center"><h2 class="reveal">${esc(d.cta_h)}</h2>${searchForm(lang, '', false, 'b')}<div style="margin-top:48px;text-align:left">${waitlistBox(lang)}</div></div></section>`;
   return layout(req, lang, { title: d.home_title, desc: d.home_desc, path: '/', noindex: !!opts.q, body, jsonld: [orgLd(req, lang), siteLd(req, lang), faqLd(lang)] });
@@ -398,9 +397,14 @@ const vehicleTitle = (r, fallback) => {
   return x?.make ? nice(x.make) : fallback;
 };
 function photoFigure(lang, r) {
-  const d = dict(lang); const ph = r.photo;
+  const ph = r.photo;
   if (!ph && !r.vehicle?.make) return ''; // марка неизвестна: показывать нечего
-  return `<figure class="photo${ph ? '' : ' nophoto'}"><div class="ph">${ph ? `<img src="${esc(ph.url)}" alt="${esc(vehicleTitle(r, ''))}" width="960" height="600" decoding="async" fetchpriority="high">` : ''}<div class="fallback">${silhouette}</div></div>${ph ? `<figcaption>${esc(d.photo_cap)} · ${esc(d.photo_src)}</figcaption>` : ''}</figure>`;
+  return figureHtml(lang, ph, vehicleTitle(r, ''));
+}
+// фото модели: подпись «иллюстрация модели» и автор/лицензия (требование свободных лицензий), без ссылок наружу
+function figureHtml(lang, ph, alt) {
+  const d = dict(lang);
+  return `<figure class="photo${ph ? '' : ' nophoto'}"><div class="ph">${ph ? `<img src="${esc(ph.url)}" alt="${esc(alt)}" width="960" height="600" decoding="async" fetchpriority="high" referrerpolicy="no-referrer">` : ''}<div class="fallback">${silhouette}</div></div>${ph ? `<figcaption>${esc(d.photo_cap)}${ph.credit ? ` · ${esc(d.photo_by)}: ${esc(ph.credit)}` : ''}</figcaption>` : ''}</figure>`;
 }
 function specChips(lang, r) {
   const x = r.decoded; const v = r.ua?.summary?.vehicle || {}; const d = dict(lang);
@@ -474,7 +478,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 
-export function plateReport(req, lang, plate, hist, pcov, wanted) {
+export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null) {
   const d = dict(lang);
   const g0 = hist.groups[0];
   const v = g0?.summary.vehicle;
@@ -497,15 +501,15 @@ export function plateReport(req, lang, plate, hist, pcov, wanted) {
 <div class="notice info">${esc(fmt(d.plate_note, { from: pcov.from || '—', to: pcov.to || '—' }))}${hist.groups.length > 1 ? ` <b>${esc(plural(lang, hist.groups.length, d.plate_groups))}.</b>` : ''}</div>${groupsHtml}
 ${searchForm(lang, '', false, 'b')}<p class="muted sm">${esc(d.sources_note)}</p>`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
-<div class="vehicle solo"><div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
+<div class="vehicle${photo ? '' : ' solo'}">${photo ? figureHtml(lang, photo, sub) : ''}<div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
 <section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
   return layout(req, lang, { title: `${plate} — ${d.plate_h} | VINScope`, desc: d.plate_h, path: '/check', body, noindex: true });
 }
 
 const RDW_T = {
-  uk: { h: 'Нідерланди (RDW)', eyebrow: 'Реєстр RDW, Нідерланди', sub: 'Відкриті дані дорожньої служби Нідерландів. VIN у відкритих даних немає.', first: 'Перша реєстрація', firstNl: 'Перша реєстрація в Нідерландах', owner: 'Остання зміна власника', apk: 'Техогляд (APK) дійсний до', insured: 'Страхування (WAM)', yes: 'Так', no: 'Ні', exported: 'Позначка «експорт»', recall: 'Відкликання без ремонту', odo: 'Оцінка пробігу', odoOk: 'Логічний', odoBad: 'Нелогічний (можлива скрутка)', price: 'Каталожна ціна', engine: 'Двигун', color: 'Колір', kind: 'Тип', na: 'немає даних', note: 'Пробіг RDW не публікує — лише висновок про його логічність.', flagExp: 'Авто позначене як експортоване з Нідерландів — перевірте, чи воно ще на нідерландських номерах.', ukNone: 'У реєстрах України за цим номером записів немає.' },
-  ru: { h: 'Нидерланды (RDW)', eyebrow: 'Реестр RDW, Нидерланды', sub: 'Открытые данные дорожной службы Нидерландов. VIN в открытых данных нет.', first: 'Первая регистрация', firstNl: 'Первая регистрация в Нидерландах', owner: 'Последняя смена владельца', apk: 'Техосмотр (APK) действует до', insured: 'Страхование (WAM)', yes: 'Да', no: 'Нет', exported: 'Отметка «экспорт»', recall: 'Отзыв без ремонта', odo: 'Оценка пробега', odoOk: 'Логичный', odoBad: 'Нелогичный (возможна скрутка)', price: 'Каталожная цена', engine: 'Двигатель', color: 'Цвет', kind: 'Тип', na: 'нет данных', note: 'Пробег RDW не публикует — только вывод о его логичности.', flagExp: 'Авто помечено как экспортированное из Нидерландов — проверьте, остаётся ли оно на нидерландских номерах.', ukNone: 'В реестрах Украины по этому номеру записей нет.' },
-  en: { h: 'Netherlands (RDW)', eyebrow: 'RDW register, Netherlands', sub: 'Open data of the Dutch vehicle authority. Open data does not include the VIN.', first: 'First registration', firstNl: 'First registered in the Netherlands', owner: 'Last owner change', apk: 'MOT (APK) valid until', insured: 'Insurance (WAM)', yes: 'Yes', no: 'No', exported: 'Export flag', recall: 'Unrepaired recall', odo: 'Odometer verdict', odoOk: 'Logical', odoBad: 'Illogical (possible rollback)', price: 'List price', engine: 'Engine', color: 'Colour', kind: 'Type', na: 'no data', note: 'RDW does not publish the odometer reading, only a plausibility verdict.', flagExp: 'The car is flagged as exported from the Netherlands. Check whether it still carries Dutch plates.', ukNone: 'No records for this plate in the Ukrainian registers.' },
+  uk: { h: 'Нідерланди', eyebrow: 'Реєстр Нідерландів', sub: 'Дані реєстру Нідерландів. VIN у них не вказується.', first: 'Перша реєстрація', firstNl: 'Перша реєстрація в Нідерландах', owner: 'Остання зміна власника', apk: 'Техогляд (APK) дійсний до', insured: 'Страхування (WAM)', yes: 'Так', no: 'Ні', exported: 'Позначка «експорт»', recall: 'Відкликання без ремонту', odo: 'Оцінка пробігу', odoOk: 'Логічний', odoBad: 'Нелогічний (можлива скрутка)', price: 'Каталожна ціна', engine: 'Двигун', color: 'Колір', kind: 'Тип', na: 'немає даних', note: 'Реєстр не публікує пробіг — лише висновок про його логічність.', flagExp: 'Авто позначене як експортоване з Нідерландів — перевірте, чи воно ще на нідерландських номерах.', ukNone: 'У реєстрах України за цим номером записів немає.' },
+  ru: { h: 'Нидерланды', eyebrow: 'Реестр Нидерландов', sub: 'Данные реестра Нидерландов. VIN в них не указывается.', first: 'Первая регистрация', firstNl: 'Первая регистрация в Нидерландах', owner: 'Последняя смена владельца', apk: 'Техосмотр (APK) действует до', insured: 'Страхование (WAM)', yes: 'Да', no: 'Нет', exported: 'Отметка «экспорт»', recall: 'Отзыв без ремонта', odo: 'Оценка пробега', odoOk: 'Логичный', odoBad: 'Нелогичный (возможна скрутка)', price: 'Каталожная цена', engine: 'Двигатель', color: 'Цвет', kind: 'Тип', na: 'нет данных', note: 'Реестр не публикует пробег — только вывод о его логичности.', flagExp: 'Авто помечено как экспортированное из Нидерландов — проверьте, остаётся ли оно на нидерландских номерах.', ukNone: 'В реестрах Украины по этому номеру записей нет.' },
+  en: { h: 'Netherlands', eyebrow: 'Netherlands register', sub: 'Dutch vehicle register data. It does not include the VIN.', first: 'First registration', firstNl: 'First registered in the Netherlands', owner: 'Last owner change', apk: 'MOT (APK) valid until', insured: 'Insurance (WAM)', yes: 'Yes', no: 'No', exported: 'Export flag', recall: 'Unrepaired recall', odo: 'Odometer verdict', odoOk: 'Logical', odoBad: 'Illogical (possible rollback)', price: 'List price', engine: 'Engine', color: 'Colour', kind: 'Type', na: 'no data', note: 'The register does not publish the odometer reading, only a plausibility verdict.', flagExp: 'The car is flagged as exported from the Netherlands. Check whether it still carries Dutch plates.', ukNone: 'No records for this plate in the Ukrainian registers.' },
 };
 const NLW = {
   uk: { personenauto: 'Легковий автомобіль', bedrijfsauto: 'Комерційний автомобіль', motorfiets: 'Мотоцикл', bromfiets: 'Moped', aanhangwagen: 'Причіп', bus: 'Автобус', zwart: 'Чорний', wit: 'Білий', grijs: 'Сірий', blauw: 'Синій', rood: 'Червоний', groen: 'Зелений', geel: 'Жовтий', bruin: 'Коричневий', oranje: 'Помаранчевий', beige: 'Бежевий', paars: 'Фіолетовий', zilver: 'Сріблястий', benzine: 'Бензин', diesel: 'Дизель', elektriciteit: 'Електро', lpg: 'Газ (LPG)', cng: 'Газ (CNG)', waterstof: 'Водень', hatchback: 'Хетчбек', sedan: 'Седан', stationwagen: 'Універсал', mpv: 'Мінівен', coupe: 'Купе', cabriolet: 'Кабріолет' },
@@ -532,7 +536,7 @@ export function rdwReport(req, lang, plate, v, wanted) {
   const main = `${wantedHtml}${flags.length ? `<div class="notice">${flags.map(esc).join('<br>')}</div>` : ''}<section class="panel"><h2>${esc(t.h)}</h2><dl class="spec-grid">${rows.map(([k, x]) => `<div><dt>${esc(k)}</dt><dd>${esc(x)}</dd></div>`).join('')}</dl><p class="muted sm">${esc(t.note)}</p></section>
 <div class="notice info">${esc(t.ukNone)} ${esc(t.sub)}</div>${searchForm(lang, '', false, 'b')}`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a>
-<div class="vehicle solo"><div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate, false, 'NL')}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
+<div class="vehicle${v.photo ? '' : ' solo'}">${v.photo ? figureHtml(lang, v.photo, title) : ''}<div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate, false, 'NL')}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
 <section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${actionsBlock(lang)}</aside></div></section>`;
   return layout(req, lang, { title: `${plate} — ${t.h} | VINScope`, desc: t.sub, path: '/check', body, noindex: true });
 }

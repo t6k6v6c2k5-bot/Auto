@@ -25,6 +25,7 @@ function consistency(decoded, ua) {
 }
 
 // Фото модели берём из Wikipedia: в имени файла обычно есть год. Если он сильно расходится с годом авто, лучше показать силуэт.
+// год в имени файла учитывается при подборе фото (photo.js)
 const photoYear = (url) => { const m = /(?:^|[/_-])((?:19|20)\d{2})(?=[_\-.\s]|$)/.exec(decodeURIComponent(url || '').split('/').pop() || ''); return m ? +m[1] : null; };
 export function photoFits(photo, year) {
   if (!photo) return null;
@@ -43,24 +44,26 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
   // платные данные США/Канады: только для американского рынка (NHTSA узнал VIN или код региона 1–5), с кэшем и суточным лимитом; идут параллельно с NHTSA
   const usaP = withProvider && (decoded.trusted || ['US', 'CA', 'MX'].includes(region))
     ? withDeadline(fetchProvider(vin, plan, decoded).catch((e) => { console.error('provider failed', e.message); return null; }), 14000, null) : Promise.resolve(null);
-  const [rec, comp, rate, fuel, ca] = await Promise.all([
+  // реестр, розыск и расшифровка по коду изготовителя — локально и сразу; фото, страховка и упоминания идут параллельно с внешними базами
+  const ua = historyByVin(vin);
+  const wanted = wantedByVin(vin);
+  const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
+  const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : local ? { make: local.make, model: local.model, year: local.years.length === 1 ? local.years[0] : null } : { make: decoded.make };
+  const regPlate = plate || ua.summary?.plates?.at(-1) || '';
+  const photoP = veh.make ? withDeadline(getPhoto(veh.make, veh.model, veh.year).catch(() => null), Math.max(2500, left()), null) : Promise.resolve(null);
+  const [rec, comp, rate, fuel, ca, insurance, mentions, photo] = await Promise.all([
     withDeadline(getRecalls(decoded), left(), { items: [], unavailable: true }),
     withDeadline(getComplaints(decoded), left(), { count: 0, unavailable: true }),
     withDeadline(getRatings(decoded), left(), null),
     withDeadline(fuelEconomy(decoded), left(), null),
     withDeadline(canadaRecalls(decoded), left(), null),
+    withDeadline(checkInsurance({ vin, plate: regPlate }), 8500, null),
+    withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null),
+    photoP,
   ]);
-  const ua = historyByVin(vin);
-  const wanted = wantedByVin(vin);
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
-  const regPlate = plate || ua.summary?.plates?.at(-1) || '';
-  const insurance = await withDeadline(checkInsurance({ vin, plate: regPlate }), 8500, null);
-  const mentions = await withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null);
-  const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch, local, usa });
-  const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : local ? { make: local.make, model: local.model, year: local.years.length === 1 ? local.years[0] : null } : { make: decoded.make };
-  const photo = veh.make && !local ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 1200, null), veh.year) : null;
   const found = Boolean(decoded.trusted || decoded.found || ua.rows.length || wanted.length || usa?.found);
   // «Что делать дальше»: ключи i18n, собранные из реальных результатов
   const next = [];

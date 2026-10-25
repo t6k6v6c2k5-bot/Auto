@@ -129,3 +129,15 @@ test('МТСБУ: разбор GetStatus и GetHistory', async () => {
   const h = normalizeHistory({ BMClass: '12', BMCoef: '0,91', SearchResult: [{ 'FContract.StartYear': '2014', 'FContract.CaseCount': '' }, { 'FContract.StartYear': '2015', 'FContract.DInsurer.Name': 'СКАЙД', 'FContract.CaseCount': '2', 'FContract.TotalClaimspaid': '1500,5' }] });
   assert.equal(h.bmClass, '12'); assert.equal(h.claims, 2); assert.equal(h.policies[0].year, '2015'); assert.equal(h.policies[0].paid, 1500.5);
 });
+
+test('фото: выбор снимка нужной модели и года, без интерьеров и деталей', async () => {
+  const { pickFile, brandNames, modelNames } = await import('../src/photo.js');
+  assert.deepEqual(brandNames('LADA (ВАЗ)'), ['lada', 'vaz']);
+  assert.deepEqual(modelNames('21063'), ['21063', '2106']);
+  const pg = (title, index, w = 960) => ({ title: 'File:' + title, index, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/' + encodeURIComponent(title), thumbwidth: w, extmetadata: { Artist: { value: '<a href="#">John</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } } }] });
+  const pages = [pg('2003 Honda Accord interior.jpg', 1), pg('2019 Honda Accord LX.jpg', 2), pg('Honda Civic 2003.jpg', 3), pg('2003 Honda Accord EX sedan.jpg', 4), pg('2004 Honda Accord coupe.jpg', 5)];
+  const r = pickFile(pages, { make: 'HONDA', model: 'Accord', year: 2003 });
+  assert.equal(r.title, '2003 Honda Accord EX sedan.jpg'); assert.equal(r.credit, 'John, CC BY-SA 4.0');
+  assert.equal(pickFile([pg('2019 Honda Accord LX.jpg', 1)], { make: 'HONDA', model: 'Accord', year: 2003 }), null); // другое поколение
+  assert.equal(pickFile([pg('VAZ-2106 in Kyiv.jpg', 1)], { make: 'LADA (ВАЗ)', model: '21063', year: 1986 }).title, 'VAZ-2106 in Kyiv.jpg');
+});
