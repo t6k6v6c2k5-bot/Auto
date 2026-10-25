@@ -146,11 +146,20 @@ test('фото: без точной модели берём любое фото 
   const { pickFile } = await import('../src/photo.js');
   const pg = (title, index) => ({ title: 'File:' + title, index, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/a.jpg', thumbwidth: 960 }] });
   assert.equal(pickFile([pg('2019 Honda Accord LX.jpg', 1)], { make: 'HONDA', model: 'Accord', year: null }).title, '2019 Honda Accord LX.jpg');
-  assert.equal(pickFile([pg('Honda Civic in Kyiv.jpg', 1)], { make: 'HONDA', model: '', year: null }).title, 'Honda Civic in Kyiv.jpg');
+  assert.equal(pickFile([pg('Honda Civic 2007 in Kyiv.jpg', 1)], { make: 'HONDA', model: '', year: null }).title, 'Honda Civic 2007 in Kyiv.jpg');
 });
 
 test('фото: марки и модели через дефис (Mercedes-Benz S-Class)', async () => {
   const { pickFile } = await import('../src/photo.js');
   const pg = (title) => ({ title: 'File:' + title, index: 1, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/a.jpg', thumbwidth: 960 }] });
   assert.ok(pickFile([pg('2007 Mercedes-Benz S-Class (W221) S 350.jpg')], { make: 'MERCEDES-BENZ', model: 'S-Class', year: 2007 }));
+});
+
+test('фото: тёзка марки (ГАЗ — сладость gaz) не подходит, модель ГАЗ 31105-801 разбирается', async () => {
+  const { pickFile, modelNames } = await import('../src/photo.js');
+  assert.ok(modelNames('31105-801').includes('31105'));
+  const pg = (title) => ({ title: 'File:' + title, index: 1, imageinfo: [{ mime: 'image/jpeg', thumburl: 'https://upload.wikimedia.org/x/a.jpg', thumbwidth: 960 }] });
+  assert.equal(pickFile([pg('Gaz (Persian nougat).jpg')], { make: 'ГАЗ', model: '', year: null }), null);
+  assert.ok(pickFile([pg('GAZ-31105 Volga in Kyiv.jpg')], { make: 'ГАЗ', model: '31105-801', year: 2008 }));
+  assert.ok(pickFile([pg('GAZ Volga car in Lviv.jpg')], { make: 'ГАЗ', model: '', year: null }));
 });

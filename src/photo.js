@@ -26,7 +26,7 @@ export function brandNames(make) {
 export function modelNames(model) {
   const m = String(model || '').toLowerCase().replace(/[()]/g, ' ').trim();
   if (!m) return [];
-  const first = m.split(/[\s/,]+/)[0];
+  const first = m.split(/[\s/,-]+/)[0];
   const out = [m, first];
   if (/^\d{5,}$/.test(first)) out.push(first.slice(0, 4));
   return [...new Set(out.map((x) => (/[а-яіїєґ]/i.test(x) ? translit(x) : x).replace(/[_-]+/g, ' ')))];
@@ -36,6 +36,8 @@ const BAD = /\b(interior|innen|dashboard|cockpit|engine|motor|badge|logo|emblem|
 const norm = (s) => String(s).toLowerCase().replace(/^file:/, '').replace(/[_-]+/g, ' ');
 
 // выбор лучшего файла: марка и модель в имени, без «интерьеров» и деталей, год ближе к нужному
+const VEHICLE = /(?<!\p{L})(car|cars|auto|automobile|vehicle|sedan|saloon|hatchback|wagon|estate|coupe|suv|pickup|truck|lorry|van|minivan|bus|coach|motorcycle|motorbike|scooter|tractor|taxi|limousine|convertible|cabriolet|авто|автомобіль|автомобиль|машина|вантажівка|грузовик|автобус|мотоцикл)(?!\p{L})/iu;
+const wordIn = (name, w) => new RegExp(`(^|[^\\p{L}\\d])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}\\d]|$)`, 'iu').test(name);
 export function pickFile(pages, { make, model, year }) {
   const brands = brandNames(make), models = modelNames(model);
   let best = null;
@@ -44,7 +46,8 @@ export function pickFile(pages, { make, model, year }) {
     if (!/image\/(jpeg|png|webp)/.test(ii.mime || 'image/jpeg')) continue;
     const name = norm(p.title);
     if (BAD.test(name)) continue;
-    if (!brands.some((b) => name.includes(b)) && !(models[0] && /^\d{4}$/.test(models.at(-1)) && name.includes(models.at(-1)))) continue;
+    if (!brands.some((b) => wordIn(name, b)) && !(models[0] && /^\d{4}$/.test(models.at(-1)) && name.includes(models.at(-1)))) continue;
+    if (!models.length && !VEHICLE.test(name) && !/\d{2,}/.test(name)) continue; // только марка: на фото должен быть транспорт, а не тёзка марки
     const mHit = models.find((m) => new RegExp(`(^|[^a-z0-9])${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(name));
     if (models.length && !mHit) continue;
     const ys = (name.match(/\b(19[5-9]\d|20[0-3]\d)\b/g) || []).map(Number);
@@ -89,7 +92,7 @@ async function commons(q) {
 export async function getPhoto(make, model, year) {
   if (!make) return null;
   const y = Number(year) || null;
-  const key = `v4|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
+  const key = `v5|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);
@@ -110,7 +113,7 @@ export async function getPhoto(make, model, year) {
   try {
     for (const q of queries) { const pages = await run(q); if (blocked) break; result = pickFile(pages, { make, model, year: y }); if (result) break; }
     if (!result && !blocked) result = pickFile(seen, { make, model, year: null });
-    if (!result && !blocked) { const pages = await run(b); if (!blocked) result = pickFile(pages, { make, model: '', year: null }); }
+    if (!result && !blocked) { const pages = await run(`${b} car`); if (!blocked) result = pickFile(pages, { make, model: '', year: null }); }
   } catch { blocked = true; }
   if (!blocked) store.setPhotoRow(key, result?.url || null, result?.title || null, result?.credit || null);
   mem.set(key, { t: Date.now() - (blocked ? 5.9 * 3600e3 : 0), v: result }); // при блокировке повторим скоро
