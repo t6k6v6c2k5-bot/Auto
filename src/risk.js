@@ -2,7 +2,7 @@
 // Каждый фактор — {pts, key, vars}; сумма баллов ровно равна показанному числу (в т.ч. базовый уровень).
 // Чего мы НЕ знаем (аукционы США, пробег, аварии), в баллы не превращается: это отдельная пометка в интерфейсе.
 const BASE = 12;
-export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mismatch }) {
+export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mismatch, local }) {
   const factors = [{ pts: BASE, key: 'f_base', vars: {} }];
   const add = (pts, key, vars = {}) => factors.push({ pts, key, vars });
   const year = ua?.summary?.vehicle?.year || (decoded?.trusted ? decoded.year : null);
@@ -20,7 +20,7 @@ export function riskScore({ decoded, recalls, wanted, ua, region, complaints, mi
   if (recalls.length) add(Math.min(20, recalls.length * 4), 'f_recalls', { n: recalls.length });
   if (complaints?.fires > 0) add(5, 'f_fires', { n: complaints.fires });
   if (age >= 15) add(10, 'f_old', { n: age }); else if (age >= 8) add(5, 'f_mid', { n: age });
-  if (!decoded?.found && !s && !wanted.length) add(15, 'f_nodata');
+  if (!decoded?.found && !s && !wanted.length && !local) add(15, 'f_nodata');
 
   let total = factors.reduce((a, f) => a + f.pts, 0);
   // розыск: итог не ниже 92 — добавляем недостающие баллы в сам фактор, чтобы сумма сходилась

@@ -150,13 +150,16 @@ async function page(req, res, url, lang, rest) {
       const r = await buildReport(v.vin);
       // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
-      let early = [];
+      let early = [], unverified = false;
       if (fromPlate && looksLikePlate(fromPlate)) {
         const veh = r.ua.summary?.vehicle || {};
         const b4 = (x) => String(x || '').toUpperCase().replace(/[^A-ZА-ЯІЇЄҐ]/g, '').slice(0, 3);
-        early = historyByPlate(fromPlate).groups.filter((g) => b4(g.summary.vehicle.brand) === b4(veh.brand) && (!veh.year || !g.summary.vehicle.year || veh.year === g.summary.vehicle.year));
+        const groups = historyByPlate(fromPlate).groups;
+        // есть запись реестра с VIN — показываем только совпавшие по марке/году группы; иначе показываем все, но с пометкой «не сверено»
+        if (veh.brand) early = groups.filter((g) => b4(g.summary.vehicle.brand) === b4(veh.brand) && (!veh.year || !g.summary.vehicle.year || veh.year === g.summary.vehicle.year));
+        else { early = groups; unverified = true; }
       }
-      return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early }));
+      return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early, unverified }));
     }
     const plate = normalizePlate(raw);
     if (!looksLikePlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);

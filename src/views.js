@@ -263,7 +263,13 @@ function tv(lang, value) {
   return hit ? esc(hit) : (lang === 'en' ? esc(value) : en(lang, value));
 }
 
+function localBlock(lang, r) {
+  const d = dict(lang); const l = r.local;
+  return `<section class="panel" aria-labelledby="h-dec"><h2 id="h-dec">${esc(d.local_h)}</h2><div class="notice info">${esc(d.local_note)}</div><dl class="kv"><dt>${esc(d.local_make)}</dt><dd>${esc(l.make)}</dd>${l.model ? `<dt>${esc(d.local_model)}</dt><dd>${esc(l.model)}</dd>` : ''}${l.years.length ? `<dt>${esc(d.local_year)}</dt><dd>${esc(l.years.join(' / '))}</dd>` : ''}</dl></section>`;
+}
+
 function decodeBlock(lang, r) {
+  if (r.local) return localBlock(lang, r);
   const d = dict(lang); const x = r.decoded;
   const rows = x.found ? (x.trusted ? [['dk_make', x.make], ['dk_model', x.model], ['dk_year', x.year], ['dk_trim', x.trim], ['dk_body', x.body], ['dk_drive', x.drive], ['dk_engine', x.engine], ['dk_fuel', x.fuel], ['dk_trans', x.transmission], ['dk_plant', x.plant]] : [['dk_make', x.make], ['dk_plant', x.plant]]).filter((q) => q[1]) : [];
   const mm = r.mismatch.length ? `<div class="notice bad">${ic.warn}<div><b>${esc(d.mm_h)}</b>${r.mismatch.map((m) => `<div>${esc(fmt(d['mm_' + m.field], { vin: m.vin, registry: m.registry }))}</div>`).join('')}</div></div>` : '';
@@ -299,6 +305,7 @@ const vehicleTitle = (r, fallback) => {
   const x = r.decoded; const v = r.ua?.summary?.vehicle;
   if (x?.trusted) return `${nice(x.make)} ${nice(x.model)}, ${x.year}`;
   if (v?.brand) return `${brandModel(v.brand, v.model)}${v.year ? ', ' + v.year : ''}`;
+  if (r.local) return `${r.local.make}${r.local.model ? ' ' + r.local.model : ''}${r.local.years.length === 1 ? ', ' + r.local.years[0] : ''}`;
   return x?.make ? nice(x.make) : fallback;
 };
 function photoFigure(lang, r) {
@@ -343,20 +350,27 @@ function tiles(lang, r) {
 
 const actionsBlock = (lang) => `<div class="panel actions-panel noprint"><h2>${esc(t(lang, 'print_h'))}</h2><div class="actions"><button class="btn ghost" type="button" data-print>${esc(t(lang, 'print'))}</button><button class="btn ghost" type="button" id="share" data-ok="${esc(t(lang, 'copied_ok'))}">${esc(t(lang, 'share'))}</button></div><p class="muted sm" style="margin:12px 0 0">${esc(t(lang, 'share_note'))}</p></div>`;
 
-function earlyPlateBlock(lang, plate, early) {
-  if (!early?.length) return '';
+function plateAddBlock(lang, vin) {
   const d = dict(lang);
-  return `<section class="panel" aria-labelledby="h-early"><h2 id="h-early">${esc(fmt(d.plate_early_h, { plate }))}</h2><p class="muted sm">${esc(d.plate_early_note)}</p>${early.map((g) => timeline(lang, g.rows, d.plate_h)).join('')}</section>`;
+  return `<section class="panel" aria-labelledby="h-padd"><h2 id="h-padd">${esc(d.plate_add_h)}</h2><p class="muted">${esc(d.plate_add_p)}</p>
+<form class="plateadd" action="/${lang}/check" method="get"><input type="hidden" name="q" value="${esc(vin)}"><label class="sr-only" for="p-add">${esc(d.mode_plate)}</label>
+<input id="p-add" name="p" required maxlength="12" placeholder="${esc(d.plate_add_ph)}" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" class="mono"><button class="btn primary" type="submit">${esc(d.plate_add_btn)}</button></form></section>`;
 }
 
-export function checkPage(req, lang, r, { full = false, fromPlate = '', early = [] } = {}) {
+function earlyPlateBlock(lang, plate, early, unverified) {
+  if (!early?.length) return '';
+  const d = dict(lang);
+  return `<section class="panel" aria-labelledby="h-early"><h2 id="h-early">${esc(fmt(d.plate_early_h, { plate }))}</h2>${unverified ? `<div class="notice">${esc(d.plate_unverified)}</div>` : `<p class="muted sm">${esc(d.plate_early_note)}</p>`}${early.map((g) => timeline(lang, g.rows, d.plate_h)).join('')}</section>`;
+}
+
+export function checkPage(req, lang, r, { full = false, fromPlate = '', early = [], unverified = false } = {}) {
   const d = dict(lang);
   const title = vehicleTitle(r, r.vin);
   const hit = r.wanted.length > 0;
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const main = full
-    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early)}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${decodeBlock(lang, r)}${safetyBlock(lang, r, true)}${usaBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const aside = full
     ? `${actionsBlock(lang)}${waitlistBox(lang)}`

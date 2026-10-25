@@ -6,6 +6,7 @@ import { riskScore } from './risk.js';
 import { regionOf } from './vin.js';
 import { fetchProvider } from './providers.js';
 import { getPhoto } from './photo.js';
+import { localDecode } from './wmi.js';
 
 const letters = (s) => String(s || '').toUpperCase().replace(/[^A-Z]/g, '');
 // Сверка NHTSA-расшифровки VIN с записью реестра МВС: ловит подмену VIN / «чужой» кузов.
@@ -42,9 +43,10 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   const ua = historyByVin(vin);
   const wanted = wantedByVin(vin);
   const mismatch = consistency(decoded, ua);
-  const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch });
-  const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : { make: decoded.make };
-  const photo = veh.make ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 1200, null), veh.year) : null;
+  const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
+  const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch, local });
+  const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : local ? { make: local.make, model: local.model, year: local.years.length === 1 ? local.years[0] : null } : { make: decoded.make };
+  const photo = veh.make && !local ? photoFits(await withDeadline(getPhoto(veh.make, veh.model), 1200, null), veh.year) : null;
   let usa = null;
   if (withProvider) { try { usa = await fetchProvider(vin, plan, decoded); } catch (e) { console.error('provider failed', e.message); } }
   const found = Boolean(decoded.trusted || decoded.found || ua.rows.length || wanted.length || usa?.found);
@@ -54,12 +56,12 @@ export async function buildReport(vin, { withProvider = false, plan = 'single' }
   else {
     if (mismatch.length) next.push('c_mismatch');
     if (rec.items.length) next.push('c_recalls');
-    if (!ua.rows.length) next.push('c_nocover');
+    if (!ua.rows.length) next.push(local ? 'c_localonly' : 'c_nocover');
     next.push('c_default');
   }
   return {
     vin, region, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, photo, decoded, recalls: rec, complaints: comp, ratings: rate, ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }

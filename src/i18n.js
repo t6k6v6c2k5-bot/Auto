@@ -412,3 +412,25 @@ Object.assign(D.en, {
 Object.assign(D.uk, { share_note: 'Посилання постійне й відкривається в будь-кого, хто його має.' });
 Object.assign(D.ru, { share_note: 'Ссылка постоянная и открывается у любого, кто её получил.' });
 Object.assign(D.en, { share_note: 'The link is permanent and opens for anyone who has it.' });
+
+Object.assign(D.uk, {
+  local_h: 'Розшифровка за структурою VIN', local_make: 'Виробник', local_model: 'Модель (код у VIN)', local_year: 'Рік випуску (орієнтовно)',
+  local_note: 'NHTSA не знає цей VIN (він не з ринку США). Розшифровка нижче спирається на код виробника та позиції VIN, а не на офіційну базу: марка надійна, модель і рік орієнтовні.',
+  plate_add_h: 'Знаєте держномер цього авто?', plate_add_p: 'У відкритих архівах МВС до 2021 року VIN не публікувався. Введіть номер, і ми покажемо історію операцій за ним.', plate_add_btn: 'Показати історію', plate_add_ph: 'Напр. АЕ5340ІМ',
+  plate_unverified: 'Записи знайдено лише за номером і не звірені з VIN. Перевірте, що марка та модель збігаються з вашим авто: номер міг належати іншому.',
+  c_localonly: 'Реєстр з 2021 року записів за цим VIN не має: авто могло не мати операцій у цей час. Введіть держномер нижче, щоб побачити історію з архівів до 2021 року.',
+});
+Object.assign(D.ru, {
+  local_h: 'Расшифровка по структуре VIN', local_make: 'Изготовитель', local_model: 'Модель (код в VIN)', local_year: 'Год выпуска (ориентировочно)',
+  local_note: 'NHTSA не знает этот VIN (он не с рынка США). Расшифровка ниже опирается на код изготовителя и позиции VIN, а не на официальную базу: марка надёжна, модель и год ориентировочные.',
+  plate_add_h: 'Знаете госномер этого авто?', plate_add_p: 'В открытых архивах МВД до 2021 года VIN не публиковался. Введите номер, и мы покажем историю операций по нему.', plate_add_btn: 'Показать историю', plate_add_ph: 'Напр. АЕ5340ІМ',
+  plate_unverified: 'Записи найдены только по номеру и не сверены с VIN. Убедитесь, что марка и модель совпадают с вашим авто: номер мог принадлежать другому.',
+  c_localonly: 'В реестре с 2021 года записей по этому VIN нет: у авто могло не быть операций в это время. Введите госномер ниже, чтобы увидеть историю из архивов до 2021 года.',
+});
+Object.assign(D.en, {
+  local_h: 'Decoded from the VIN structure', local_make: 'Manufacturer', local_model: 'Model (code in the VIN)', local_year: 'Model year (approximate)',
+  local_note: 'NHTSA does not know this VIN (it is not a US-market car). The decode below rests on the manufacturer code and VIN positions, not an official database: the make is reliable, the model and year are approximate.',
+  plate_add_h: 'Do you know this car\'s plate number?', plate_add_p: 'MIA archives before 2021 were published without VINs. Enter the plate and we will show the operation history for it.', plate_add_btn: 'Show history', plate_add_ph: 'e.g. AE5340IM',
+  plate_unverified: 'Records were found by plate only and are not matched to the VIN. Make sure make and model match your car: the plate may have belonged to another one.',
+  c_localonly: 'The registry has no records for this VIN since 2021: the car may simply have had no operations then. Enter its plate below to see the history from archives before 2021.',
+});

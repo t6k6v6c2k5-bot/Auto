@@ -302,3 +302,7 @@ h1.platebig .plate{font-size:clamp(28px,5vw,44px);border-width:3px;border-radius
 .plate-sub{font-size:clamp(18px,2.4vw,24px);font-weight:700;color:#dbe7ff;margin:14px 0 0}
 .notice.info b{color:var(--ink)}
 @media(max-width:640px){.tiles.three{grid-template-columns:1fr 1fr}.tiles.three .tile:first-child{grid-column:1/-1}}
+
+.plateadd{display:flex;gap:10px;margin-top:6px}.plateadd input.mono{flex:1;min-width:0;font:600 17px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;padding:14px;border:1.5px solid var(--field);border-radius:12px;background:var(--surface);color:var(--ink)}
+.plateadd input:focus{outline:3px solid var(--blue);outline-offset:1px}
+@media(max-width:640px){.plateadd{flex-direction:column}}
