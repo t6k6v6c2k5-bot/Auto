@@ -11,10 +11,12 @@ const iso = (s) => (/^\d{8}$/.test(s || '') ? `${s.slice(0, 4)}-${s.slice(4, 6)}
 const num = (s) => (s && !Number.isNaN(+s) ? +s : null);
 const yes = (s) => (s === 'Ja' ? true : s === 'Nee' ? false : null);
 
-async function getJson(url) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
-  if (!r.ok) throw new Error('rdw ' + r.status);
-  return r.json();
+async function getJson(url, tries = 2) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(7000), headers: { accept: 'application/json' } });
+    if (!r.ok) throw new Error('rdw ' + r.status);
+    return await r.json();
+  } catch (e) { if (tries > 1) return getJson(url, tries - 1); throw e; }
 }
 
 export function normalizeRdw(v, fuels = []) {
@@ -23,7 +25,7 @@ export function normalizeRdw(v, fuels = []) {
     color: v.eerste_kleur && v.eerste_kleur !== 'Niet geregistreerd' ? v.eerste_kleur : '',
     firstAdmission: iso(v.datum_eerste_toelating), firstNl: iso(v.datum_eerste_tenaamstelling_in_nederland), registered: iso(v.datum_tenaamstelling),
     apkUntil: iso(v.vervaldatum_apk), cc: num(v.cilinderinhoud), cylinders: num(v.aantal_cilinders), seats: num(v.aantal_zitplaatsen), doors: num(v.aantal_deuren),
-    mass: num(v.massa_ledig_voertuig), listPrice: num(v.catalogusprijs),
+    mass: num(v.massa_ledig_voertuig), maxMass: num(v.toegestane_maximum_massa_voertuig), listPrice: num(v.catalogusprijs),
     insured: yes(v.wam_verzekerd), exported: yes(v.export_indicator), openRecall: yes(v.openstaande_terugroepactie_indicator), taxi: yes(v.taxi_indicator),
     odometerVerdict: v.tellerstandoordeel || '', odometerYear: num(v.jaar_laatste_registratie_tellerstand),
     fuel: fuels.map((f) => f.brandstof_omschrijving).filter(Boolean).join(' / '), kw: fuels.map((f) => num(f.nettomaximumvermogen)).find(Boolean) || null,

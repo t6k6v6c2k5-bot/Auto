@@ -21,7 +21,8 @@ export async function decodeVin(vin) {
     const out = {
       make: pick('Make'), model: pick('Model'), year: Number(r.ModelYear) || null,
       trim: pick('Trim'), body: pick('BodyClass'), drive: pick('DriveType'),
-      fuel: pick('FuelTypePrimary'), engine: [pick('DisplacementL') && Number(pick('DisplacementL')).toFixed(1) + 'L', pick('EngineCylinders') && pick('EngineCylinders') + ' cyl', pick('EngineHP') && pick('EngineHP') + ' hp'].filter(Boolean).join(' · '),
+      fuel: pick('FuelTypePrimary'), engine: [pick('DisplacementL') && Number(pick('DisplacementL')).toFixed(1) + 'L', pick('EngineCylinders') && pick('EngineCylinders') + ' cyl', ].filter(Boolean).join(' · '),
+      hp: Number(pick('EngineHP')) || null, kw: Number(pick('EngineKW')) || null, gvwr: pick('GVWR'), doors: Number(pick('Doors')) || null,
       transmission: pick('TransmissionStyle'), country: pick('PlantCountry'), plant: [pick('PlantCity'), pick('PlantCountry')].filter(Boolean).join(', '),
       manufacturer: pick('Manufacturer'), errorCode: r.ErrorCode || '',
     };

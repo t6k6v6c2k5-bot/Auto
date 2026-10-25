@@ -323,7 +323,10 @@ function passportBlock(lang, r) {
   if (x?.found && x.trusted) {
     add(d.dk_make, en(lang, x.make)); add(d.dk_model, en(lang, x.model)); add(d.dk_year, esc(x.year)); add(d.dk_trim, x.trim && en(lang, x.trim));
     add(d.dk_body, x.body && tv(lang, x.body)); add(d.dk_drive, x.drive && tv(lang, x.drive)); add(d.dk_engine, x.engine && esc(engineText(lang, x.engine)));
-    add(d.dk_fuel, x.fuel && tv(lang, x.fuel)); add(d.dk_trans, x.transmission && tv(lang, x.transmission)); add(d.dk_plant, x.plant && en(lang, x.plant));
+    add(d.dk_fuel, x.fuel && tv(lang, x.fuel)); add(d.dk_trans, x.transmission && tv(lang, x.transmission));
+    { const kw = x.kw || (x.hp ? Math.round(x.hp * 0.7457) : 0), hp = x.hp || (x.kw ? Math.round(x.kw * 1.341) : 0); add(d.pass_power, hp && esc(`${hp} ${d.u_hp} · ${kw} ${d.u_kw}`)); }
+    { const kg = /\(([\d,\s–-]+)\s*kg\)/i.exec(x.gvwr || ''); add(d.pass_gvwr, kg && esc(`${kg[1].trim().replace(/,/g, ' ').replace(/\s*-\s*/g, ' – ')} ${d.u_kg}`)); }
+    add(d.dk_plant, x.plant && en(lang, x.plant));
   } else if (v.brand) {
     add(d.dk_make, esc(nice(v.brand))); add(d.dk_model, v.model && esc(nice(v.model))); add(d.dk_year, esc(v.year));
     add(d.dk_body, v.body && esc(rv(lang, v.body))); add(d.dk_fuel, v.fuel && esc(rv(lang, v.fuel))); add(d.dk_engine, v.cap && esc(`${v.cap} ${d.cm3}`));
@@ -475,7 +478,8 @@ export function rdwReport(req, lang, plate, v, wanted) {
     [t.insured, yn(v.insured)], [t.exported, yn(v.exported)], [t.recall, yn(v.openRecall)],
     [t.odo, v.odometerVerdict ? (bad ? t.odoBad : t.odoOk) + (v.odometerYear ? ` (${v.odometerYear})` : '') : t.na],
     [t.price, v.listPrice ? `€${v.listPrice.toLocaleString('en')}` : ''], [t.kind, nlw(lang, v.kind)], [t.color, nlw(lang, v.color)],
-    [t.engine, [nlw(lang, v.fuel), v.cc && `${v.cc} ${d.cm3}`, v.kw && `${v.kw} kW`].filter(Boolean).join(' · ')],
+    [t.engine, [nlw(lang, v.fuel), v.cc && `${v.cc} ${d.cm3}`].filter(Boolean).join(' · ')],
+    [d.pass_power, v.kw && `${Math.round(v.kw * 1.341)} ${d.u_hp} · ${v.kw} ${d.u_kw}`], [d.pass_mass, v.mass && `${v.mass} ${d.u_kg}`], [d.pass_maxmass, v.maxMass && `${v.maxMass} ${d.u_kg}`],
   ].filter(([, x]) => x);
   const flags = [v.exported && t.flagExp, bad && t.odoBad].filter(Boolean);
   const hit = wanted.length > 0;

@@ -493,3 +493,6 @@ Object.assign(D.en, {
 Object.assign(D.uk, { pass_h: 'Дані про автомобіль', g_pass: 'Паспорт авто', g_legal: 'Юридична чистота та історія в Україні', g_usa: 'Історія в США', g_safe: 'Безпека моделі', g_next: 'Висновок', toc_h: 'Зміст звіту' });
 Object.assign(D.ru, { pass_h: 'Данные об автомобиле', g_pass: 'Паспорт авто', g_legal: 'Юридическая чистота и история в Украине', g_usa: 'История в США', g_safe: 'Безопасность модели', g_next: 'Вывод', toc_h: 'Содержание отчёта' });
 Object.assign(D.en, { pass_h: 'Vehicle data', g_pass: 'Vehicle passport', g_legal: 'Legal status and Ukrainian history', g_usa: 'US history', g_safe: 'Model safety', g_next: 'Conclusion', toc_h: 'Report contents' });
+Object.assign(D.uk, { pass_power: 'Потужність', pass_gvwr: 'Повна маса (клас)', pass_mass: 'Маса без навантаження', pass_maxmass: 'Дозволена повна маса', u_hp: 'к.с.', u_kw: 'кВт', u_kg: 'кг' });
+Object.assign(D.ru, { pass_power: 'Мощность', pass_gvwr: 'Полная масса (класс)', pass_mass: 'Масса без нагрузки', pass_maxmass: 'Разрешённая полная масса', u_hp: 'л.с.', u_kw: 'кВт', u_kg: 'кг' });
+Object.assign(D.en, { pass_power: 'Power', pass_gvwr: 'Gross weight (class)', pass_mass: 'Kerb weight', pass_maxmass: 'Maximum permitted weight', u_hp: 'hp', u_kw: 'kW', u_kg: 'kg' });
