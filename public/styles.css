@@ -361,3 +361,18 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
 @media(max-width:1020px){.tools,.diff{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.tools,.diff{grid-template-columns:1fr}.tform.grid{grid-template-columns:1fr}.tform{flex-direction:column;align-items:stretch}.toolhead{align-items:flex-start}.tico.big{width:48px;height:48px}.ckbar{top:64px}}
 @media print{.ckbar .btn{display:none}}
+
+/* ---------- отчёт: вердикт и навигация по разделам ---------- */
+.verdict{border-width:2px}.verdict.low{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}.verdict.mid{border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}.verdict.high{border-color:var(--bad)}
+.vhead{display:flex;gap:20px;align-items:center}.vhead .gauge{width:112px;height:112px;flex:none}.vhead h2{margin:2px 0 6px;font-size:24px}.vhead .eyebrow{margin:0}
+.why summary{cursor:pointer;color:var(--blue);font-weight:600;font-size:14px;list-style:none}.why summary::-webkit-details-marker{display:none}
+.verdict h3{margin-top:20px}
+.secnav{display:none;position:sticky;top:63px;z-index:20;background:color-mix(in srgb,var(--bg,#f4f6fb) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.secnav .wrap{display:flex;gap:8px;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:none}.secnav .wrap::-webkit-scrollbar{display:none}
+.secnav a{flex:none;padding:8px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.secnav a:hover,.secnav a:focus{border-color:var(--blue);color:var(--blue)}
+.grp{scroll-margin-top:130px}
+@media(max-width:1020px){.secnav{display:block}aside .toc{display:none}}
+@media(max-width:640px){.vhead{gap:14px}.vhead .gauge{width:84px;height:84px}.vhead h2{font-size:20px}}
+.panel details.why{border:0;padding:0;margin:0;background:none;box-shadow:none}.panel details.why>summary{padding:0;min-height:0;font-size:14px;color:var(--blue);background:none;border:0}.panel details.why>summary::before{content:none}
+.panel details.why[open]>summary{margin-bottom:8px}

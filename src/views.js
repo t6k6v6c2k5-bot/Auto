@@ -44,7 +44,7 @@ const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : 
 export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '' }) {
   const alt = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(abs(req, '/' + l + path))}">`).join('');
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, '\\u003c')}</script>`).join('');
-  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ['/pricing', 'nav_pricing']];
+  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ['/sources', 'nav_sources'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
   const cur = (p) => (path === p || (p === '/tools' && path.startsWith('/tools/')) ? ' aria-current="page"' : '');
   const og = abs(req, `/og-${lang}.png`);
   const url = abs(req, '/' + lang + path);
@@ -57,7 +57,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=4">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=5">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -69,7 +69,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 </div></header>
 <main id="main" tabindex="-1">${body}</main>
 <footer><div class="wrap foot"><div>${logo}<b>VINScope</b><p>${esc(t(lang, 'footer'))}</p></div>
-<div><p class="foot-h">${esc(t(lang, 'nav_sources'))}</p>${t(lang, 'srcs').map(([n, , u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n.split(' — ')[0])}<span class="sr-only"> ${esc(t(lang, 'ext_new_tab'))}</span></a>`).join('')}</div>
+<div><p class="foot-h">${esc(t(lang, 'nav_sources'))}</p>${t(lang, 'srcs').slice(0, 4).map(([n, , u]) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n.split(' — ')[0])}<span class="sr-only"> ${esc(t(lang, 'ext_new_tab'))}</span></a>`).join('')}<a href="/${lang}/sources">${esc(t(lang, 'src_all'))}</a></div>
 <div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
@@ -135,11 +135,10 @@ ${chip('c1', ['g', '<path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"
 ${chip('c2', ['b', '<path d="M5 7h14M5 12h14M5 17h9"/>'], d.t_reg, `${d.ua_owners} · ${d.ua_imported}`)}
 ${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'], `${d.risk_h} 0–100`, 'NHTSA')}</div>
 </div></section>
-${diffBlock(lang)}${toolsHomeBlock(lang)}
-<section class="sec"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
-<section class="sec"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
-<section class="sec dark"><div class="wrap"><h2 class="reveal">${esc(d.know_h)}</h2><ul class="grid4" role="list">${d.know.map(([h, p]) => `<li class="kcard reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
-<section class="sec alt"><div class="wrap narrow"><h2 class="reveal">${esc(d.src_h)}</h2><p class="sec-sub">${esc(d.src_p)}</p>${sourcesList(lang)}</div></section>
+<section class="sec" id="what"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
+<section class="sec alt"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
+${toolsHomeBlock(lang)}${diffBlock(lang)}
+<section class="sec alt"><div class="wrap narrow"><h2 class="reveal">${esc(d.src_h)}</h2><p class="sec-sub">${esc(d.src_p)}</p>${sourcesList(lang)}<p class="center" style="margin-top:18px"><a href="/${lang}/sources">${esc(t(lang, 'src_all'))}</a></p></div></section>
 <section class="sec"><div class="wrap narrow"><h2 class="reveal">${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
 <section class="sec cta"><div class="wrap narrow center"><h2 class="reveal">${esc(d.cta_h)}</h2>${searchForm(lang, '', false, 'b')}<div style="margin-top:48px;text-align:left">${waitlistBox(lang)}</div></div></section>`;
   return layout(req, lang, { title: d.home_title, desc: d.home_desc, path: '/', noindex: !!opts.q, body, jsonld: [orgLd(req, lang), siteLd(req, lang), faqLd(lang)] });
@@ -207,6 +206,13 @@ const riskTitle = (lang) => (lang === 'en' ? 'Risk Score' : `${en(lang, 'Risk Sc
 function riskBlock(lang, r) {
   const d = dict(lang);
   return `<section class="panel" aria-labelledby="h-risk"><h2 id="h-risk">${riskTitle(lang)}</h2><div class="riskrow">${gauge(lang, r.risk.score, r.risk.level)}<div><span class="pill ${r.risk.level}">${esc(d['risk_' + r.risk.level])}</span><ul class="factors">${r.risk.factors.map((f) => `<li><b>+${f.pts}</b> ${esc(t(lang, f.key, f.vars))}</li>`).join('')}</ul></div></div><p class="muted sm">${esc(d.risk_note)} ${esc(d.risk_not_counted)}${r.risk.limited ? ' ' + esc(d.risk_limited) : ''}</p></section>`;
+}
+
+// «Коротко»: оценка риска и план действий одной карточкой в начале отчёта; разбор баллов — по раскрытию
+function verdictBlock(lang, r) {
+  const d = dict(lang);
+  const items = r.next.flatMap((k) => (Array.isArray(d[k]) ? d[k] : [d[k]]));
+  return `<section class="panel verdict ${r.risk.level}" aria-labelledby="h-verdict"><div class="vhead">${gauge(lang, r.risk.score, r.risk.level)}<div><p class="eyebrow">${riskTitle(lang)}</p><h2 id="h-verdict">${esc(d['risk_' + r.risk.level])}</h2><details class="why"><summary>${esc(d.why_score)}</summary><ul class="factors">${r.risk.factors.map((f) => `<li><b>+${f.pts}</b> ${esc(t(lang, f.key, f.vars))}</li>`).join('')}</ul><p class="muted sm">${esc(d.risk_note)} ${esc(d.risk_not_counted)}${r.risk.limited ? ' ' + esc(d.risk_limited) : ''}</p></details></div></div><h3>${esc(d.concl_h)}</h3><ul class="check tight">${items.map((x) => `<li>${ic.check}<span>${tel(x)}</span></li>`).join('')}</ul></section>`;
 }
 
 function wantedBlock(lang, r) {
@@ -284,7 +290,7 @@ function decodeBlock(lang, r) {
 const starsOf = (v, d) => (/^\d$/.test(String(v)) ? `<span aria-hidden="true" class="stars">${'★'.repeat(+v)}${'☆'.repeat(5 - +v)}</span><span class="sr-only">${v} ${esc(d.stars)}</span> <span class="muted sm" aria-hidden="true">${v} ${esc(d.stars)}</span>` : `<span class="muted">${esc(d.nr)}</span>`);
 function safetyBlock(lang, r, full) {
   const d = dict(lang); const rec = r.recalls, c = r.complaints, rt = r.ratings;
-  const item = (x, long) => `<li><b>${en(lang, x.component)}</b><span lang="en">${esc((x.summary || '').slice(0, long ? 420 : 220))}…</span></li>`;
+  const item = (x, long) => `<li><b>${en(lang, x.component)}</b><span lang="en">${esc((x.summary || '').slice(0, long ? 260 : 200))}…</span></li>`;
   const head = rec.items.slice(0, full ? 3 : 3), tail = full ? rec.items.slice(3) : [];
   const recHtml = rec.items.length
     ? `<p><b>${esc(d.open_recalls)}${rec.items.length}</b></p><ul class="recalls">${head.map((x) => item(x, full)).join('')}</ul>${tail.length ? `<details><summary>${esc(fmt(d.recalls_more, { n: rec.items.length }))}</summary><ul class="recalls">${tail.map((x) => item(x, true)).join('')}</ul></details>` : ''}<p class="muted sm">${esc(d.nhtsa_en)} ${esc(d.recalls_check)}</p>`
@@ -296,7 +302,7 @@ function safetyBlock(lang, r, full) {
     rateHtml = all.every((x) => !/^\d$/.test(String(x))) ? `<p class="muted">${esc(d.rate_none)}</p>` : `<dl class="kv"><dt>${esc(d.rate_overall)}</dt><dd>${starsOf(rt.overall, d)}</dd><dt>${esc(d.rate_front)}</dt><dd>${starsOf(rt.front, d)}</dd><dt>${esc(d.rate_side)}</dt><dd>${starsOf(rt.side, d)}</dd><dt>${esc(d.rate_roll)}</dt><dd>${starsOf(rt.rollover, d)}</dd></dl><p class="muted sm" lang="en">${esc(rt.description)}</p>`;
   }
   const ca = r.canada;
-  const caHtml = ca ? `<h3>${esc(d.ca_h)}</h3>${ca.count ? `<p><b>${esc(fmt(d.ca_n, { n: ca.count }))}</b></p><ul class="recalls">${ca.items.slice(0, 4).map((x) => `<li><b>${en(lang, x.system || x.number)} · ${esc(x.date)}</b>${x.issue ? `<span lang="en">${esc(x.issue)}</span>` : ''}</li>`).join('')}</ul><p class="muted sm">${esc(d.ca_note)}</p>` : `<p class="good">${ic.check}<span>${esc(d.ca_none)}</span></p>`}` : '';
+  const caHtml = ca ? `<h3>${esc(d.ca_h)}</h3>${ca.count ? `<p><b>${esc(fmt(d.ca_n, { n: ca.count }))}</b></p>${(() => { const li = (x) => `<li><b>${en(lang, x.system || x.number)} <span class="muted">${esc(x.date)}</span></b>${x.issue ? `<span lang="en">${esc(x.issue.slice(0, 220))}${x.issue.length > 220 ? '…' : ''}</span>` : ''}</li>`; return `<ul class="recalls">${ca.items.slice(0, 2).map(li).join('')}</ul>${ca.items.length > 2 ? `<details><summary>${esc(fmt(d.recalls_more, { n: ca.items.length }))}</summary><ul class="recalls">${ca.items.slice(2).map(li).join('')}</ul></details>` : ''}`; })()}<p class="muted sm">${esc(d.ca_note)}</p>` : `<p class="good">${ic.check}<span>${esc(d.ca_none)}</span></p>`}` : '';
   return `<section class="panel" aria-labelledby="h-safe"><h2 id="h-safe">${esc(d.safety_h)}</h2><h3>${esc(d.recalls_h)}</h3>${recHtml}${caHtml}<h3>${esc(d.comp_h)}</h3>${compHtml}${rateHtml ? `<h3>${esc(d.rate_h)}</h3>${rateHtml}` : ''}</section>`;
 }
 
@@ -453,17 +459,18 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const cta = paywallOn() ? `${esc(d.unlock)} — ${price(PLANS.single.usd)}` : esc(d.unlock_free);
   const href = `/${lang}/checkout?plan=single&vin=${encodeURIComponent(r.vin)}`;
   const usa = r.usa && (r.usa.queried || r.usa.capped || r.usa.cached) ? usaBlock(lang, r) : '';
-  const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe], ['g-next', d.g_next]];
+  const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${riskBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 2)}${safetyBlock(lang, r, true)}${G('g-next', secs.length - 1)}${conclusionBlock(lang, r)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${verdictBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
     ? `${toc}${actionsBlock(lang)}<div class="panel noprint"><h2>${esc(TT[lang].nav)}</h2>${toolCards(lang)}</div>`
     : `<div class="panel paywall"><h2>${paywallOn() ? ic.lock : ''}${esc(d.paid_h)}</h2><ul class="mini"><li>${ic.check}<span>${esc(d.ua_locked)}</span></li><li>${ic.check}<span>${esc(d.go_pdf)}</span></li></ul><a class="btn primary wide" href="${href}">${cta}</a></div>${waitlistBox(lang)}`;
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
-  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
+  const secnav = full ? `<nav class="secnav noprint" aria-label="${esc(d.toc_h)}"><div class="wrap">${secs.map(([id, tt]) => `<a href="#${id}">${esc(tt.split(' ').slice(0, 2).join(' '))}</a>`).join('')}</div></nav>` : '';
+  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 

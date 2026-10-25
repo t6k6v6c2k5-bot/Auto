@@ -514,3 +514,13 @@ Object.assign(D.en, { ins_lim_prop: 'Limit: property', ins_lim_life: 'Limit: lif
 Object.assign(D.uk, { nav_tools: 'Інструменти' });
 Object.assign(D.ru, { nav_tools: 'Инструменты' });
 Object.assign(D.en, { nav_tools: 'Tools' });
+// полный список источников (главная, «Источники», подвал)
+D.uk.srcs = [...D.uk.srcs.slice(0, 3), ['EPA fueleconomy.gov — витрата пального й CO₂', 'офіційні дані США, без ключа', 'https://www.fueleconomy.gov/feg/ws/'], ['Transport Canada — відкличні кампанії', 'open.canada.ca, відкриті дані', 'https://open.canada.ca/data/en/dataset/1ec92326-47ef-4110-b7ca-959fab03f96d'], ['RDW (Нідерланди) — реєстр за номером', 'opendata.rdw.nl, відкриті дані', 'https://opendata.rdw.nl/'], ['НБУ — офіційний курс валют', 'bank.gov.ua, для калькулятора розмитнення', 'https://bank.gov.ua/ua/open-data/api-dev'], ['Wikipedia — ілюстрації моделей', 'Wikimedia, вільні ліцензії', 'https://www.wikipedia.org/']];
+D.ru.srcs = [...D.ru.srcs.slice(0, 3), ['EPA fueleconomy.gov — расход топлива и CO₂', 'официальные данные США, без ключа', 'https://www.fueleconomy.gov/feg/ws/'], ['Transport Canada — отзывные кампании', 'open.canada.ca, открытые данные', 'https://open.canada.ca/data/en/dataset/1ec92326-47ef-4110-b7ca-959fab03f96d'], ['RDW (Нидерланды) — реестр по номеру', 'opendata.rdw.nl, открытые данные', 'https://opendata.rdw.nl/'], ['НБУ — официальный курс валют', 'bank.gov.ua, для калькулятора растаможки', 'https://bank.gov.ua/ua/open-data/api-dev'], ['Wikipedia — иллюстрации моделей', 'Wikimedia, свободные лицензии', 'https://www.wikipedia.org/']];
+D.en.srcs = [...D.en.srcs.slice(0, 3), ['EPA fueleconomy.gov — fuel economy and CO₂', 'official US data, no key', 'https://www.fueleconomy.gov/feg/ws/'], ['Transport Canada — recalls', 'open.canada.ca, open data', 'https://open.canada.ca/data/en/dataset/1ec92326-47ef-4110-b7ca-959fab03f96d'], ['RDW (Netherlands) — register by plate', 'opendata.rdw.nl, open data', 'https://opendata.rdw.nl/'], ['National Bank of Ukraine — exchange rates', 'bank.gov.ua, for the import duty calculator', 'https://bank.gov.ua/ua/open-data/api-dev'], ['Wikipedia — model illustrations', 'Wikimedia, free licences', 'https://www.wikipedia.org/']];
+Object.assign(D.uk, { src_all: 'Усі джерела даних →' });
+Object.assign(D.ru, { src_all: 'Все источники данных →' });
+Object.assign(D.en, { src_all: 'All data sources →' });
+Object.assign(D.uk, { why_score: 'Із чого складається оцінка' });
+Object.assign(D.ru, { why_score: 'Из чего складывается оценка' });
+Object.assign(D.en, { why_score: 'How the score is made up' });
