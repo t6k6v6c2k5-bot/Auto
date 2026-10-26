@@ -50,7 +50,7 @@ ${row(T.vin_region, esc(region), 's1')}${row(T.vin_wmi, esc(v.slice(0, 3)), 's1'
         const base = fuel === 'diesel' ? (cc > 3500 ? 150 : 75) : (cc > 3000 ? 100 : 50);
         excise = base * ((cc || 0) / 1000) * age;
       }
-      const duty = eu ? 0 : price * 0.10;
+      const duty = eu || fuel === 'electric' ? 0 : price * 0.10; // электромобили ввозятся без пошлины
       const vat = (price + duty + excise) * 0.20;
       const total = duty + excise + vat;
       const r = rate?.rate;
