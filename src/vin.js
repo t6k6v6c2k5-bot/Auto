@@ -2,8 +2,11 @@
 const TRANSLIT = { A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9 };
 const WEIGHTS = [8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
 
+// ярлыки при копировании («VIN: …», «ВІН-код …», «номер кузова …») не считаем частью номера
+const LABEL = /(?<![\p{L}\d])(?:vin(?:[\s-]*(?:код|code))?|він(?:[\s-]*код)?|вин(?:[\s-]*код)?|номер\s+кузова|номер\s+кузову|кузов|code)(?![\p{L}\d])/giu;
+export const stripLabels = (v) => String(v || '').replace(LABEL, ' ');
 export function normalizeVin(v) {
-  return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return stripLabels(v).toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
 export function checkDigit(vin) {

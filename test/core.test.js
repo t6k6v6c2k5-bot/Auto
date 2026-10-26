@@ -163,3 +163,9 @@ test('фото: тёзка марки (ГАЗ — сладость gaz) не п�
   assert.ok(pickFile([pg('GAZ-31105 Volga in Kyiv.jpg')], { make: 'ГАЗ', model: '31105-801', year: 2008 }));
   assert.ok(pickFile([pg('GAZ Volga car in Lviv.jpg')], { make: 'ГАЗ', model: '', year: null }));
 });
+
+test('VIN: ярлыки при копировании не мешают («VIN: …», «ВІН-код …»)', async () => {
+  const { validateVin } = await import('../src/vin.js');
+  for (const x of ['VIN: 1HGCM82633A004352', 'vin 1HGCM82633A004352', 'ВІН-код: 1HGCM82633A004352', 'номер кузова 1HGCM82633A004352', 'VIN-код 1hgcm 8263 3a00 4352']) assert.ok(validateVin(x).ok, x);
+  assert.equal(validateVin('1HGCM82633A004352').vin, '1HGCM82633A004352');
+});
