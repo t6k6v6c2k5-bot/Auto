@@ -119,7 +119,10 @@
   window.addEventListener('beforeprint', () => $$('details').forEach((d) => d.setAttribute('open', '')));
   const sh = $('#share');
   if (sh) sh.addEventListener('click', async () => {
-    await safe(() => navigator.clipboard.writeText(location.href)); track('share');
+    track('share');
+    // на телефоне — системное меню «Поделиться» (мессенджеры), иначе копируем ссылку
+    if (navigator.share) { try { await navigator.share({ title: document.title, url: location.href }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    await safe(() => navigator.clipboard.writeText(location.href));
     const o = sh.textContent; sh.textContent = '✓ ' + sh.dataset.ok; setTimeout(() => (sh.textContent = o), 1800);
   });
 

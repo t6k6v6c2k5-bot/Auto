@@ -44,7 +44,7 @@ const featIcons = ['M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6zM9 12l2 2 
 const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : ''}"><i ${A}>${cc}</i><span>${esc(p)}</span></span>`;
 
 // ---------- каркас страницы ----------
-export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '' }) {
+export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '', ogUrl = '' }) {
   const alt = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(abs(req, '/' + l + path))}">`).join('');
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, '\\u003c')}</script>`).join('');
   const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
@@ -55,7 +55,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#0a1628">${noindex ? '<meta name="robots" content="noindex,nofollow">' : `<link rel="canonical" href="${esc(url)}">${alt}<link rel="alternate" hreflang="x-default" href="${esc(abs(req, '/uk' + path))}">`}
-<meta property="og:type" content="website"><meta property="og:site_name" content="VINScope"><meta property="og:url" content="${esc(url)}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:locale" content="${LOCALE[lang]}">${LANGS.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alternate" content="${LOCALE[l]}">`).join('')}
+<meta property="og:type" content="website"><meta property="og:site_name" content="VINScope"><meta property="og:url" content="${esc(ogUrl || url)}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:locale" content="${LOCALE[lang]}">${LANGS.filter((l) => l !== lang).map((l) => `<meta property="og:locale:alternate" content="${LOCALE[l]}">`).join('')}
 <meta property="og:image" content="${esc(og)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="VINScope — ${esc(t(lang, 'brand_tag'))}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
@@ -77,7 +77,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
-<script src="/app.js?v=4" defer data-lang="${lang}"></script></body></html>`;
+<script src="/app.js?v=5" defer data-lang="${lang}"></script></body></html>`;
 }
 
 // ---------- поиск ----------
@@ -496,7 +496,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const secnav = full ? `<nav class="secnav noprint" aria-label="${esc(d.toc_h)}"><div class="wrap">${secs.map(([id, tt]) => `<a href="#${id}">${esc(tt.split(' ').slice(0, 2).join(' '))}</a>`).join('')}</div></nav>` : '';
   const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}</div><aside>${aside}</aside></div></section>`;
-  return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
+  return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, ogUrl: abs(req, `/${lang}/check?q=${encodeURIComponent(r.vin)}`), preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 
 export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null) {
