@@ -359,6 +359,15 @@ const server = createServer(async (req, res) => {
     if (!res.headersSent) send(req, res, 500, V.messagePage(req, 'uk', L('uk', 'err_500'), L('uk', 'err_500')), 'text/html; charset=utf-8', NOINDEX);
   }
 });
+// корректная остановка при деплое: дожидаемся текущих запросов (до 8 с), новые не принимаем
+let stopping = false;
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
+  if (stopping) return; stopping = true;
+  console.log(`${sig}: graceful shutdown`);
+  server.close(() => process.exit(0));
+  server.closeIdleConnections?.();
+  setTimeout(() => process.exit(0), 8000).unref();
+});
 server.headersTimeout = 15e3; server.requestTimeout = 30e3; server.keepAliveTimeout = 65e3;
 server.listen(cfg.port, '0.0.0.0', () => {
   console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);

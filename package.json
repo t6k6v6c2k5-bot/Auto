@@ -4,6 +4,6 @@
   "description": "VINScope — платная проверка авто по VIN: США, Канада, Европа",
   "type": "module",
   "main": "server.js",
-  "scripts": { "start": "node server.js", "test": "node --no-warnings --test test/*.test.js" },
+  "scripts": { "start": "node --disable-warning=ExperimentalWarning server.js", "test": "node --no-warnings --test test/*.test.js" },
   "engines": { "node": ">=22.13" }
 }
