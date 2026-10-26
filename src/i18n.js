@@ -635,3 +635,6 @@ for (const [l, paid, priv] of [
   ['ru', 'Платные тарифы — разовая оплата. Если по VIN не найдено никаких данных, деньги возвращаются автоматически.', 'Мы храним запросы (VIN или номер, язык, дату) до 90 дней, email — только если вы его указали (для письма о запуске или заказа), и технические данные для защиты от злоупотреблений. Оплату принимает платёжный провайдер, данные вашей карты нам недоступны.'],
   ['en', 'Paid plans are a one-time payment. If no data is found for the VIN, the payment is refunded automatically.', 'We keep queries (VIN or plate, language, date) for up to 90 days, your email only if you provide it (for the launch email or your order), and technical data to prevent abuse. Payments are handled by a payment provider; we have no access to your card details.'],
 ]) { D[l].terms[2] = paid; D[l].terms[3] = priv; }
+Object.assign(D.uk, { risk_nodata: 'Недостатньо даних' });
+Object.assign(D.ru, { risk_nodata: 'Недостаточно данных' });
+Object.assign(D.en, { risk_nodata: 'Not enough data' });

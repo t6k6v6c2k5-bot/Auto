@@ -65,6 +65,8 @@ export async function buildReport(vin, { withProvider = false, plan = 'single', 
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
   const risk = riskScore({ decoded, recalls: rec.items, wanted, ua, region, complaints: comp, mismatch, local, usa });
+  // нет ни истории в реестре, ни разбора производителя, ни розыска: «низкий риск» было бы ложным спокойствием
+  if (risk.level === 'low' && risk.limited && !ua.rows.length && !wanted.length && !usa?.found) risk.level = 'nodata';
   const found = Boolean(decoded.trusted || decoded.found || ua.rows.length || wanted.length || usa?.found);
   // «Что делать дальше»: ключи i18n, собранные из реальных результатов
   const next = [];

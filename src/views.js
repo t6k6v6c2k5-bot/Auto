@@ -60,7 +60,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=11">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=12">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -199,7 +199,7 @@ export function notFound(req, lang) {
 
 // ---------- блоки результата ----------
 function gauge(lang, score, level) {
-  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : 'var(--good)';
+  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : level === 'nodata' ? 'var(--muted)' : 'var(--good)';
   const C = 2 * Math.PI * 52;
   return `<svg viewBox="0 0 120 120" class="gauge" role="img" aria-label="${esc(fmt(t(lang, 'risk_aria'), { n: score }))}"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="11"/><circle cx="60" cy="60" r="52" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(C * score) / 100} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="66" text-anchor="middle" font-size="30" font-weight="800" fill="currentColor">${score}</text></svg>`;
 }
@@ -441,7 +441,7 @@ function vehicleHero(lang, r, eyebrow, fromPlate) {
 <div class="vehicle${photoFigure(lang, r) ? '' : ' solo'}">${photoFigure(lang, r)}<div><p class="eyebrow">${esc(eyebrow)}</p><h1 class="${title === r.vin ? 'vin' : ''}">${esc(title)}</h1>${title !== r.vin ? `<p class="vinmono">${esc(r.vin)}</p>` : ''}${fromPlate ? `<p class="byplate">${esc(fmt(d.found_by_plate, { plate: '' }))}${plateEl(fromPlate, true)}</p>` : ''}${specChips(lang, r)}</div></div></div></section>`;
 }
 const miniGauge = (score, level) => {
-  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : 'var(--good)'; const C = 2 * Math.PI * 20;
+  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : level === 'nodata' ? 'var(--muted)' : 'var(--good)'; const C = 2 * Math.PI * 20;
   return `<svg class="mini-g" viewBox="0 0 52 52" ${A}><circle cx="26" cy="26" r="20" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="26" cy="26" r="20" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * score) / 100} ${C}" transform="rotate(-90 26 26)"/></svg>`;
 };
 const tileIc = {

@@ -397,3 +397,4 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
 .scams .slink,.panel details.why>summary,.toc a:hover,.secnav a:hover,.secnav a:focus{color:var(--link)}
 .panel .eyebrow{color:var(--amber-2)}
 @media(prefers-color-scheme:dark){.panel .eyebrow{color:var(--amber)}}
+.pill.nodata{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-2)}.verdict.nodata{border-color:var(--line-2)}
