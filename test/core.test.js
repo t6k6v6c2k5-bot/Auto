@@ -169,3 +169,8 @@ test('VIN: ярлыки при копировании не мешают («VIN: 
   for (const x of ['VIN: 1HGCM82633A004352', 'vin 1HGCM82633A004352', 'ВІН-код: 1HGCM82633A004352', 'номер кузова 1HGCM82633A004352', 'VIN-код 1hgcm 8263 3a00 4352']) assert.ok(validateVin(x).ok, x);
   assert.equal(validateVin('1HGCM82633A004352').vin, '1HGCM82633A004352');
 });
+
+test('клиентский JS не использует lookbehind (ломает Safari < 16.4)', async () => {
+  const { readFileSync } = await import('node:fs');
+  for (const f of ['public/app.js', 'public/tools.js']) assert.ok(!/\(\?<[!=]/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), f);
+});

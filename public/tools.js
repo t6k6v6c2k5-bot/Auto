@@ -16,8 +16,8 @@
   const row = (k, v, cls = '') => `<div class="trow ${cls}"><span>${esc(k)}</span><b>${v}</b></div>`;
   const year = new Date().getFullYear();
   const CYR = { 'А': 'A', 'В': 'B', 'Е': 'E', 'І': 'I', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X', 'У': 'Y' };
-  const LABEL = /(?<![\p{L}\d])(?:vin(?:[\s-]*(?:код|code))?|він(?:[\s-]*код)?|вин(?:[\s-]*код)?|номер\s+кузова|номер\s+кузову|кузов|code)(?![\p{L}\d])/giu;
-  const latin = (v) => [...String(v).replace(LABEL, ' ').toUpperCase()].map((c) => CYR[c] || c).join('').replace(/[^A-Z0-9]/g, '');
+  const LABEL = /(^|[^\p{L}\d])(?:vin(?:[\s-]*(?:код|code))?|він(?:[\s-]*код)?|вин(?:[\s-]*код)?|номер\s+кузова|номер\s+кузову|кузов|code)(?![\p{L}\d])/giu;
+  const latin = (v) => [...String(v).replace(LABEL, '$1 ').toUpperCase()].map((c) => CYR[c] || c).join('').replace(/[^A-Z0-9]/g, '');
 
   const tools = {
     vin(form) {
