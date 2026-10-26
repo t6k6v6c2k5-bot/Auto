@@ -60,7 +60,8 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
   const local = decoded.trusted || ua.rows.length ? null : localDecode(vin); // запасная расшифровка по коду изготовителя
   const veh = decoded.trusted ? { make: decoded.make, model: decoded.model, year: decoded.year } : ua.summary ? { make: ua.summary.vehicle.brand, model: ua.summary.vehicle.model, year: ua.summary.vehicle.year } : local ? { make: local.make, model: local.model, year: local.years.length === 1 ? local.years[0] : null } : { make: decoded.make };
   const regPlate = plate || ua.summary?.plates?.at(-1) || '';
-  const photoP = veh.make ? withDeadline(getPhoto(veh.make, veh.model, veh.year).catch(() => null), 3000, null) // поиск фото первый раз может идти дольше: отчёт не ждёт, а снимок сохранится в кэше для следующего открытия : Promise.resolve(null);
+  // поиск фото в первый раз может идти дольше 3 с: отчёт не ждёт, снимок сохранится в кэше для следующего открытия
+  const photoP = veh.make ? withDeadline(getPhoto(veh.make, veh.model, veh.year).catch(() => null), 3000, null) : Promise.resolve(null);
   const [rec, comp, rate, fuel, ca, insurance, mentions, photo] = await Promise.all([
     withDeadline(getRecalls(decoded), left(), { items: [], unavailable: true }),
     withDeadline(getComplaints(decoded), left(), { count: 0, unavailable: true }),
