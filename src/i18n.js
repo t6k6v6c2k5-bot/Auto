@@ -638,3 +638,7 @@ for (const [l, paid, priv] of [
 Object.assign(D.uk, { risk_nodata: 'Недостатньо даних' });
 Object.assign(D.ru, { risk_nodata: 'Недостаточно данных' });
 Object.assign(D.en, { risk_nodata: 'Not enough data' });
+{
+  const fix = { uk: 'Введіть держномер, і ми знайдемо авто в держреєстрі та в базі розшуку: марка, модель, рік, історія реєстрацій і VIN, якщо він відомий. Безкоштовно.', ru: 'Введите госномер, и мы найдём авто в госреестре и в базе розыска: марка, модель, год, история регистраций и VIN, если он известен. Бесплатно.', en: 'Enter a Ukrainian plate number and we will find the car in the state register and the wanted database: make, model, year, registration history and the VIN if known. Free.' };
+  for (const l of Object.keys(fix)) D[l].lp_plate.lead = fix[l];
+}

@@ -36,7 +36,17 @@ export function photoFits(photo, year) {
 
 const withDeadline = (p, ms, fallback) => Promise.race([p, new Promise((r) => setTimeout(() => r(fallback), ms))]);
 
-export async function buildReport(vin, { withProvider = false, plan = 'single', plate = '' } = {}) {
+// бесплатные отчёты кэшируем на 10 минут: повторные открытия и обновления страницы не дёргают внешние базы (платные запросы не кэшируются здесь — у них свой кэш)
+const reportCache = new Map();
+export async function buildReport(vin, opts = {}) {
+  if (opts.withProvider) return buildReportFresh(vin, opts);
+  const key = `${vin}|${opts.plate || ''}`; const hit = reportCache.get(key);
+  if (hit && Date.now() - hit.t < 600e3) return hit.v;
+  const v = await buildReportFresh(vin, opts);
+  if (v.decoded?.found || v.ua?.rows?.length || v.wanted?.length) { reportCache.set(key, { t: Date.now(), v }); if (reportCache.size > 300) reportCache.delete(reportCache.keys().next().value); }
+  return v;
+}
+async function buildReportFresh(vin, { withProvider = false, plan = 'single', plate = '' } = {}) {
   const t0 = Date.now();
   const decoded = await withDeadline(decodeVin(vin), 6000, { found: false, unavailable: true });
   const left = () => Math.max(1500, 9000 - (Date.now() - t0));
