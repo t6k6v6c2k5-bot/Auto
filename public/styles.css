@@ -391,3 +391,9 @@ aside .tools{grid-template-columns:1fr;gap:8px}aside .tool{padding:12px;box-shad
   .panel[aria-labelledby="h-safe"] .recalls li{break-inside:avoid}
   .two{display:block}.two>aside{display:none}
 }
+/* контраст ссылок и подписей: ≥ 4.5:1 в светлой и тёмной теме */
+:root{--link:#1d4ed8}
+@media(prefers-color-scheme:dark){:root{--link:#8fb0ff}}
+.scams .slink,.panel details.why>summary,.toc a:hover,.secnav a:hover,.secnav a:focus{color:var(--link)}
+.panel .eyebrow{color:var(--amber-2)}
+@media(prefers-color-scheme:dark){.panel .eyebrow{color:var(--amber)}}
