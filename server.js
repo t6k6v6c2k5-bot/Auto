@@ -303,6 +303,11 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     let { pathname } = url;
     if (pathname === '/healthz') return send(req, res, 200, 'ok', 'text/plain');
+    // единый адрес сайта: со старого адреса Railway и с www — 301 на основной домен (для поиска и ссылок)
+    if (cfg.baseUrl && (req.method === 'GET' || req.method === 'HEAD')) {
+      const want = new URL(cfg.baseUrl).host, have = String(req.headers.host || '').toLowerCase();
+      if (have && have !== want && (have === 'www.' + want || have.endsWith('.up.railway.app'))) { res.writeHead(301, { location: cfg.baseUrl + req.url }); return res.end(); }
+    }
     if (pathname === '/robots.txt') return send(req, res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /*/checkout\nSitemap: ${origin(req)}/sitemap.xml\n`, 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res);
