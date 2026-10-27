@@ -33,6 +33,7 @@ export function modelNames(model) {
 }
 
 const BAD = /\b(interior|innen|dashboard|cockpit|engine|motor|badge|logo|emblem|wheel|rim|seat|trunk|boot|detail|tail ?light|headlight|steering|gauge|instrument|key|wreck|crash|damaged|toy|model ?car|diecast|scale|lego|brochure|ad\b|poster|stamp|police|taxi)\b/i;
+const REAR = /(?<!\p{L})(rear|back|heck|сзади|ззаду|зад)(?!\p{L})/iu;
 const norm = (s) => String(s).toLowerCase().replace(/^file:/, '').replace(/[_-]+/g, ' ');
 
 // выбор лучшего файла: марка и модель в имени, без «интерьеров» и деталей, год ближе к нужному
@@ -46,6 +47,7 @@ export function pickFile(pages, { make, model, year }) {
     if (!/image\/(jpeg|png|webp)/.test(ii.mime || 'image/jpeg')) continue;
     const name = norm(p.title);
     if (BAD.test(name)) continue;
+    if (REAR.test(name)) continue; // вид сзади: часто виден чужой номер и не узнать модель
     if (!brands.some((b) => wordIn(name, b)) && !(models[0] && /^\d{4}$/.test(models.at(-1)) && name.includes(models.at(-1)))) continue;
     if (!models.length && !VEHICLE.test(name) && !/\d{2,}/.test(name)) continue; // только марка: на фото должен быть транспорт, а не тёзка марки
     const mHit = models.find((m) => new RegExp(`(^|[^a-z0-9])${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(name));
@@ -58,7 +60,6 @@ export function pickFile(pages, { make, model, year }) {
       score += dy <= 1 ? 4 : dy <= 3 ? 2 : 0;
     }
     if ((ii.thumbwidth || 0) < 600) score -= 2;
-    if (/(?<!\p{L})(rear|back|heck|сзади|ззаду|зад)(?!\p{L})/iu.test(name)) score -= 3; // предпочитаем вид спереди
     if (/(?<!\p{L})(front|спереди|спереду)(?!\p{L})/iu.test(name)) score += 1;
     if (!best || score > best.score) best = { score, p, ii };
   }
@@ -92,7 +93,7 @@ async function commons(q) {
 export async function getPhoto(make, model, year) {
   if (!make) return null;
   const y = Number(year) || null;
-  const key = `v5|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
+  const key = `v6|${make}|${model || ''}|${y ? Math.round(y / 3) * 3 : ''}`.toUpperCase(); // соседние годы делят один снимок
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < 6 * 3600e3) return hit.v;
   const row = store.getPhotoRow(key);

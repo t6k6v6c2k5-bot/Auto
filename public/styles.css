@@ -432,3 +432,79 @@ footer{margin-top:0}
 @media(prefers-reduced-motion:reduce){.totop{transition:none}}
 @media print{.totop{display:none!important}}
 @media(max-width:860px){.legal{padding-right:calc(var(--gut) + 56px)}}
+
+/* ===== v4: премиальная подача — стекло, дисциплина цвета, bento, компактный отчёт ===== */
+:root{--r:16px;--r-l:20px;--glass:rgba(255,255,255,.045);--glass-line:rgba(255,255,255,.09)}
+/* цвет: янтарь — только у главной кнопки; акцент — синий */
+.hero{background:radial-gradient(900px 460px at 82% -12%,rgba(64,110,255,.50),transparent 62%),radial-gradient(640px 360px at -8% 108%,rgba(120,90,255,.20),transparent 62%),linear-gradient(180deg,#09131f,#0b1d3b)}
+.grad{background:linear-gradient(96deg,#d4e1ff 0%,#93b3ff 48%,#a99bff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{color:#9db9ff}.panel .eyebrow{color:var(--link)}
+.langs a.on{background:rgba(255,255,255,.17);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.btn.primary{background:var(--amber);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 2px rgba(0,0,0,.25)}
+.btn.primary:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 8px 20px rgba(255,176,32,.26);transform:translateY(-1px)}
+.searchbox{box-shadow:0 20px 50px -16px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.1)}
+/* переключатель VIN / госномер — сегмент, а не россыпь тэгов */
+.modes{gap:0;display:inline-flex;padding:3px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+.modes span{border:0;background:transparent;border-radius:9px;padding:6px 14px;color:#b4c5e4}
+.modes span.on,.sec .modes span.on,.sec.cta .modes span.on{background:rgba(255,255,255,.95);color:#0b1426;border:0;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sec .modes,.sec.cta .modes{background:var(--surface-2);border-color:var(--line)}.sec .modes span,.sec.cta .modes span{background:transparent;border:0;color:var(--ink-2)}
+.sec .modes span.on,.sec.cta .modes span.on{background:var(--ink);color:var(--surface)}
+/* поверхности: границы вместо теней, стекло в тёмной теме */
+.card,.tool,.guide,.panel,.tile,.scams li,.plan{box-shadow:none}
+.card,.tool,.guide,.tile{transition:border-color .2s,background .2s,transform .2s}
+.card:hover,.tool:hover,.guide:hover{box-shadow:none;border-color:color-mix(in srgb,var(--blue) 55%,var(--line));transform:translateY(-2px)}
+@media(prefers-color-scheme:dark){
+  .card,.tool,.guide,.panel,.tile,.scams li{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.022));border-color:var(--glass-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  .sec.alt{background:linear-gradient(180deg,rgba(255,255,255,.025),transparent);border-color:var(--glass-line)}
+  .card:hover,.tool:hover,.guide:hover{background:linear-gradient(180deg,rgba(80,120,255,.14),rgba(255,255,255,.03))}
+}
+.sec{position:relative;isolation:isolate}
+.sec.alt::before,.sec.glow::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(620px 280px at 88% 0,rgba(64,110,255,.10),transparent 70%)}
+/* карточка-пример отчёта в шапке главной */
+.visual{min-height:0;display:flex;justify-content:flex-end;align-items:center}
+.pv{position:relative;display:block;width:min(100%,410px);padding:20px;border-radius:24px;color:#fff;text-decoration:none;background:linear-gradient(155deg,rgba(255,255,255,.12),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.16);box-shadow:0 40px 90px -24px rgba(64,110,255,.55),inset 0 1px 0 rgba(255,255,255,.2);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);transform:perspective(1400px) rotateY(-5deg) rotateX(1.5deg);transition:transform .35s,box-shadow .35s}
+.pv::before{content:"";position:absolute;inset:-60px -40px auto auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(110,140,255,.35),transparent 65%);z-index:-1;filter:blur(8px)}
+.pv:hover{transform:none;box-shadow:0 44px 96px -22px rgba(64,110,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.pv-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.pv-tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a8bfee}.pv-vin{font:600 12px ui-monospace,Menlo,monospace;color:#8fa6d3;letter-spacing:.04em}
+.pv-main{display:flex;align-items:center;gap:16px;margin-bottom:16px}.pv-g{width:92px;height:92px;flex:none}.pv-main b{display:block;font-size:20px;line-height:1.2;letter-spacing:-.02em;margin-bottom:8px}
+.pv-pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:700;background:rgba(245,158,11,.18);color:#fcd34d;border:1px solid rgba(245,158,11,.35)}
+.pv-rows{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.pv-rows li{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);font-size:14px;color:#c9d6ee}
+.pv-rows b{color:#fff;font-size:14px;font-weight:700}
+.pv-ic{display:grid;place-items:center;width:28px;height:28px;border-radius:9px}.pv-ic svg{width:16px;height:16px}
+.pv-rows .ok .pv-ic{background:rgba(52,211,153,.18);color:#34d399}.pv-rows .na .pv-ic{background:rgba(148,163,184,.18);color:#a9b8d0}.pv-rows .warn .pv-ic{background:rgba(245,158,11,.2);color:#fbbf24}
+.pv-open{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#bcd0ff}.pv:hover .pv-open svg{transform:translateX(3px)}.pv-open svg{transition:transform .2s}
+@media(prefers-reduced-motion:reduce){.pv{transform:none}.pv-open svg{transition:none}}
+/* bento: «Что мы проверяем» */
+.bento{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.bento>li{margin:0;padding:22px}.bento>li:last-child{grid-column:1/-1}
+.bento>li.big{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-end;min-height:340px;padding:30px;position:relative;overflow:hidden;background:radial-gradient(420px 260px at 85% 0,rgba(64,110,255,.28),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02))}
+.bento>li.big .fi{position:absolute;right:22px;top:22px;width:92px;height:92px;opacity:.9;color:#7fa2ff;padding:22px;border-radius:26px;background:rgba(64,110,255,.16);border:1px solid rgba(127,162,255,.3)}
+.bento>li.big h3{font-size:26px;letter-spacing:-.02em}.bento>li.big p{font-size:16px;max-width:36ch}
+.bento .fi{width:44px;height:44px;padding:10px;border-radius:13px;background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--link);margin-bottom:14px}
+@media(max-width:1020px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.bento>li.big{grid-column:1/-1;grid-row:auto;min-height:230px}}
+@media(max-width:640px){.bento{grid-template-columns:1fr}.bento>li:last-child{grid-column:auto}.bento>li.big{min-height:210px;padding:24px}.bento>li.big .fi{width:64px;height:64px;padding:15px;border-radius:18px}}
+/* «как обманывают» — аккордеон */
+.scams{display:grid;grid-template-columns:1fr;gap:10px;max-width:860px;margin:0 auto}
+.scams li{display:block;padding:0;border:1px solid var(--line);border-top:1px solid var(--line);border-left:3px solid var(--ring-warn,#f59e0b)}
+.scams details{background:none;border:0;border-radius:0;margin:0;padding:0;box-shadow:none}
+.scams summary{display:flex;align-items:center;gap:14px;list-style:none;cursor:pointer;padding:16px 18px;min-height:56px}.scams summary::-webkit-details-marker{display:none}
+.scams summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none}.scams details[open] summary::after{transform:rotate(-135deg)}
+.scams .sn{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:color-mix(in srgb,var(--ring-warn,#f59e0b) 18%,transparent);color:var(--warn);font-weight:800;font-size:14px;flex:none}
+.scams h3{margin:0;font-size:17px}.scams .sbody{padding:0 18px 18px 60px}.scams .sbody p{margin:0 0 10px}
+@media(max-width:640px){.scams .sbody{padding:0 16px 16px 16px}}
+/* отчёт: компактная шапка, плашки целиком под ней, фото обрезано выше номера */
+.hero.result .wrap{padding-bottom:34px}.tiles{margin-top:22px}
+.vehicle{grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:clamp(20px,4vw,52px);align-items:center}
+@media(max-width:860px){.vehicle{grid-template-columns:1fr}.hv{margin-top:14px}}
+.photo .ph{aspect-ratio:16/9}.photo img{object-position:50% 30%}
+.hv{display:inline-flex;align-items:center;gap:12px;margin-top:18px;padding:10px 16px 10px 10px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
+.hv .hv-g .mini-g{width:52px;height:52px;display:block;color:#fff}.hv small{display:block;font-size:12px;color:#a8bfee;font-weight:600}.hv b{font-size:18px;letter-spacing:-.01em}
+.tile.risk .ic{background:none}.tile .mini-g{color:var(--ink)}
+.tile{border-radius:var(--r)}
+@media(max-width:640px){.hero.result .wrap{padding-bottom:26px}.tiles{margin-top:16px}}
+@media print{.pv,.hv{display:none!important}}
+.pv-open{display:flex;margin-top:4px;padding:6px 2px 2px}.pv-rows{margin-bottom:10px}
+@media(max-width:1020px){.visual{justify-content:center;margin-top:6px}.pv{transform:none;width:100%;max-width:460px}.pv::before{display:none}}
+ul.scams{margin-left:auto;margin-right:auto}

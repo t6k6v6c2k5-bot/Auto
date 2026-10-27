@@ -21,7 +21,7 @@ export const toolCards = (lang, skip = '') => `<ul class="tools" role="list">${T
 // «Как обманывают»: схема → как проверить → кнопка на нужный инструмент
 export const diffBlock = (lang) => {
   const T = TT[lang];
-  return `<section class="sec"><div class="wrap"><h2 class="reveal">${esc(T.scam_h)}</h2><ul class="scams" role="list">${T.scams.map(([h, how, check, href, label]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(how)}</p><p class="scheck"><b>${esc(T.scam_how)}:</b> ${esc(check)}</p><a class="slink" href="/${lang}${href === '/' ? '/#q-a' : href}">${esc(label)} →</a></li>`).join('')}</ul></div></section>`;
+  return `<section class="sec"><div class="wrap"><h2 class="reveal">${esc(T.scam_h)}</h2><ul class="scams" role="list">${T.scams.map(([h, how, check, href, label], i) => `<li class="reveal"><details${i === 0 ? ' open' : ''}><summary><span class="sn">${i + 1}</span><h3>${esc(h)}</h3></summary><div class="sbody"><p>${esc(how)}</p><p class="scheck"><b>${esc(T.scam_how)}:</b> ${esc(check)}</p><a class="slink" href="/${lang}${href === '/' ? '/#q-a' : href}">${esc(label)} →</a></div></details></li>`).join('')}</ul></div></section>`;
 };
 
 export const toolsHomeBlock = (lang) => {

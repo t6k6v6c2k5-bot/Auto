@@ -68,7 +68,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=21">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=26">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -133,6 +133,17 @@ const sourcesList = (lang) => `<ul class="srclist">${dict(lang).srcs.map(([n, m,
 const h1Html = (txt) => esc(txt).replace(/\*(.+?)\*/g, '<span class="grad">$1</span>');
 
 // ---------- публичные страницы ----------
+// «живой» пример отчёта в шапке: вместо картинки — то, что получит пользователь (ссылка ведёт на настоящий бесплатный отчёт)
+const PV_VIN = '1HGCM82633A004352';
+function previewCard(lang) {
+  const d = dict(lang); const C = 2 * Math.PI * 52;
+  const ico = { ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', na: '<path d="M5 12h14"/>', warn: '<path d="M12 7v6M12 17h.01"/>' };
+  return `<a class="pv" href="/${lang}/check?q=${PV_VIN}" aria-label="${esc(d.pv_aria)}"><div class="pv-top"><span class="pv-tag">${esc(d.pv_tag)}</span><span class="pv-vin">${PV_VIN.slice(0, 4)}…${PV_VIN.slice(-4)}</span></div>
+<div class="pv-main"><svg viewBox="0 0 120 120" class="pv-g" ${A}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="11"/><circle cx="60" cy="60" r="52" fill="none" stroke="#f59e0b" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(C * 47) / 100} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="68" text-anchor="middle" font-size="34" font-weight="800" fill="#fff">47</text></svg><div><b>${esc(d.pv_title)}</b><span class="pv-pill">${esc(d.risk_mid)}</span></div></div>
+<ul class="pv-rows" role="list">${d.pv_rows.map(([k, v, st]) => `<li class="${st}"><span class="pv-ic" ${A}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}>${ico[st]}</svg></span><span>${esc(k)}</span><b>${esc(v)}</b></li>`).join('')}</ul>
+<span class="pv-open">${esc(d.pv_open)} <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>`;
+}
+
 export function home(req, lang, stats, opts = {}) {
   const d = dict(lang);
   const nf = (n) => Number(n || 0).toLocaleString(lang === 'en' ? 'en-US' : lang === 'ru' ? 'ru-RU' : 'uk-UA');
@@ -144,12 +155,8 @@ export function home(req, lang, stats, opts = {}) {
 ${searchForm(lang, opts.q || '', true, 'a', opts.err || '')}
 <div class="herostats">${stats.wantedCount ? stat(lang, nf(stats.wantedCount), compact(lang, stats.wantedCount), d.stat_wanted) : ''}${stats.registryRecords ? stat(lang, nf(stats.registryRecords), compact(lang, stats.registryRecords), d.stat_reg) : ''}${stats.wantedUpdatedAt ? stat(lang, dateOf(stats.wantedUpdatedAt), shortDate(lang, stats.wantedUpdatedAt), d.stat_upd) : ''}</div>
 </div>
-<div class="visual" aria-hidden="true">${carSvg()}
-${chip('c1', ['g', '<path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>'], d.t_wanted_ok, d.wanted_h)}
-${chip('c2', ['b', '<path d="M5 7h14M5 12h14M5 17h9"/>'], d.t_reg, `${d.ua_owners} · ${d.ua_imported}`)}
-${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>'], `${d.risk_h} 0–100`, d.trust3)}</div>
-</div></section>
-<section class="sec" id="what"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
+<div class="visual">${previewCard(lang)}</div></section>
+<section class="sec" id="what"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="bento" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal${i === 0 ? ' big' : ''}"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
 <section class="sec alt"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
 ${toolsHomeBlock(lang)}${guidesHomeBlock(lang)}${diffBlock(lang)}
 <section class="sec"><div class="wrap narrow"><h2 class="reveal">${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
@@ -210,7 +217,7 @@ export function notFound(req, lang) {
 
 // ---------- блоки результата ----------
 function gauge(lang, score, level) {
-  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : level === 'nodata' ? 'var(--muted)' : 'var(--good)';
+  const col = level === 'high' ? '#ef4444' : level === 'mid' ? '#f59e0b' : level === 'nodata' ? 'var(--muted)' : '#10b981';
   const C = 2 * Math.PI * 52;
   return `<svg viewBox="0 0 120 120" class="gauge" role="img" aria-label="${esc(fmt(t(lang, 'risk_aria'), { n: score }))}"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--line)" stroke-width="11"/><circle cx="60" cy="60" r="52" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(C * score) / 100} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="66" text-anchor="middle" font-size="30" font-weight="800" fill="currentColor">${score}</text></svg>`;
 }
@@ -449,11 +456,11 @@ function specChips(lang, r) {
 function vehicleHero(lang, r, eyebrow, fromPlate) {
   const d = dict(lang); const title = vehicleTitle(r, r.vin);
   return `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
-<div class="vehicle${photoFigure(lang, r) ? '' : ' solo'}">${photoFigure(lang, r)}<div><p class="eyebrow">${esc(eyebrow)}</p><h1 class="${title === r.vin ? 'vin' : ''}">${esc(title)}</h1>${title !== r.vin ? `<p class="vinmono">${esc(r.vin)}</p>` : ''}${fromPlate ? `<p class="byplate">${esc(fmt(d.found_by_plate, { plate: '' }))}${plateEl(fromPlate, true)}</p>` : ''}${specChips(lang, r)}</div></div></div></section>`;
+<div class="vehicle${photoFigure(lang, r) ? '' : ' solo'}">${photoFigure(lang, r)}<div><p class="eyebrow">${esc(eyebrow)}</p><h1 class="${title === r.vin ? 'vin' : ''}">${esc(title)}</h1>${title !== r.vin ? `<p class="vinmono">${esc(r.vin)}</p>` : ''}${fromPlate ? `<p class="byplate">${esc(fmt(d.found_by_plate, { plate: '' }))}${plateEl(fromPlate, true)}</p>` : ''}${specChips(lang, r)}<div class="hv"><span class="hv-g">${miniGauge(r.risk.score, r.risk.level)}</span><div><small>${esc(d.t_risk)}</small><b>${esc(d['risk_' + r.risk.level])}</b></div></div></div></div></div></section>`;
 }
 const miniGauge = (score, level) => {
-  const col = level === 'high' ? 'var(--bad)' : level === 'mid' ? 'var(--warn)' : level === 'nodata' ? 'var(--muted)' : 'var(--good)'; const C = 2 * Math.PI * 20;
-  return `<svg class="mini-g" viewBox="0 0 52 52" ${A}><circle cx="26" cy="26" r="20" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="26" cy="26" r="20" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * score) / 100} ${C}" transform="rotate(-90 26 26)"/></svg>`;
+  const col = level === 'high' ? '#ef4444' : level === 'mid' ? '#f59e0b' : level === 'nodata' ? 'var(--muted)' : '#10b981'; const C = 2 * Math.PI * 20;
+  return `<svg class="mini-g" viewBox="0 0 52 52" ${A}><circle cx="26" cy="26" r="20" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="26" cy="26" r="20" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * score) / 100} ${C}" transform="rotate(-90 26 26)"/><text x="26" y="31" text-anchor="middle" font-size="15" font-weight="800" fill="currentColor">${score}</text></svg>`;
 };
 const tileIc = {
   ok: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M5 12l5 5 9-10"/></svg>`,
@@ -470,7 +477,7 @@ function tiles(lang, r) {
   const rc = r.recalls.items.length;
   const t3 = !r.decoded.trusted ? ['na', tileIc.na, d.t_na] : rc ? ['warn', tileIc.bad, plural(lang, rc, d.t_recalls_n)] : ['ok', tileIc.ok, d.t_recalls_none];
   const tile = ([cls, icon, txt], label) => `<li class="tile ${cls}"><span class="ic">${icon}</span><div><small>${esc(label)}</small><b>${esc(txt)}</b></div></li>`;
-  return `<div class="wrap"><ul class="tiles" role="list">${tile(t1, d.wanted_h)}${tile(t2, regLabel)}${tile(t3, d.t_recalls)}<li class="tile risk"><span class="ic">${miniGauge(r.risk.score, r.risk.level)}</span><div><small>${esc(d.t_risk)}</small><b>${r.risk.score} · ${esc(d['risk_' + r.risk.level])}</b></div></li></ul></div>`;
+  return `<div class="wrap"><ul class="tiles three" role="list">${tile(t1, d.wanted_h)}${tile(t2, regLabel)}${tile(t3, d.t_recalls)}</ul></div>`;
 }
 
 const actionsBlock = (lang) => `<div class="panel actions-panel noprint"><h2>${esc(t(lang, 'print_h'))}</h2><div class="actions"><button class="btn ghost" type="button" data-print>${esc(t(lang, 'print'))}</button><button class="btn ghost" type="button" id="share" data-ok="${esc(t(lang, 'copied_ok'))}">${esc(t(lang, 'share'))}</button></div><p class="muted sm" style="margin:12px 0 0">${esc(t(lang, 'share_note'))}</p></div>`;

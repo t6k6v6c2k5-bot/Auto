@@ -642,3 +642,8 @@ Object.assign(D.en, { risk_nodata: 'Not enough data' });
   const fix = { uk: 'Введіть держномер, і ми знайдемо авто в держреєстрі та в базі розшуку: марка, модель, рік, історія реєстрацій і VIN, якщо він відомий. Безкоштовно.', ru: 'Введите госномер, и мы найдём авто в госреестре и в базе розыска: марка, модель, год, история регистраций и VIN, если он известен. Бесплатно.', en: 'Enter a Ukrainian plate number and we will find the car in the state register and the wanted database: make, model, year, registration history and the VIN if known. Free.' };
   for (const l of Object.keys(fix)) D[l].lp_plate.lead = fix[l];
 }
+
+// карточка-пример отчёта в шапке главной
+Object.assign(D.uk, { pv_tag: 'Приклад звіту', pv_open: 'Відкрити приклад', pv_title: 'Honda Accord, 2003', pv_rows: [['Розшук', 'Збігів немає', 'ok'], ['Держреєстр', 'Записів немає', 'na'], ['Відкличні кампанії', '24 кампанії', 'warn']], pv_aria: 'Приклад звіту: Honda Accord, 2003' });
+Object.assign(D.ru, { pv_tag: 'Пример отчёта', pv_open: 'Открыть пример', pv_title: 'Honda Accord, 2003', pv_rows: [['Розыск', 'Совпадений нет', 'ok'], ['Госреестр', 'Записей нет', 'na'], ['Отзывные кампании', '24 кампании', 'warn']], pv_aria: 'Пример отчёта: Honda Accord, 2003' });
+Object.assign(D.en, { pv_tag: 'Sample report', pv_open: 'Open the sample', pv_title: 'Honda Accord, 2003', pv_rows: [['Wanted check', 'No matches', 'ok'], ['State registry', 'No records', 'na'], ['Recalls', '24 campaigns', 'warn']], pv_aria: 'Sample report: Honda Accord, 2003' });
