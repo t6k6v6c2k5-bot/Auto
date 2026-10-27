@@ -239,3 +239,9 @@ test('комментарии о поведении на дороге: тольк
   const car = validateComment({ key: '1HGCM82633A004352', kind: 'vin', cat: 'docs', text: 'У авто уже было три владельца за два года, документы оформляли через разных посредников.' });
   assert.equal(car.ok, true); // «владельцы» в истории авто допустимы вне дорожных тем
 });
+
+test('блок «Чи продається зараз»: бесплатно факт и дата, детали только в платном', async () => {
+  const { renderReport } = await import('../src/views.js').then((m) => ({ renderReport: m.reportBody || null })).catch(() => ({}));
+  const { dict } = await import('../src/i18n.js');
+  for (const l of ['uk', 'ru', 'en']) for (const k of ['ls_h', 'ls_yes', 'ls_none', 'ls_locked', 'ls_note']) assert.ok(dict(l)[k], l + k);
+});

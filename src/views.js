@@ -425,6 +425,19 @@ function adsBlock(lang, r) {
   const cells = [[d.ad_region, uk(a.region)], [d.ad_mileage, a.mileageK ? `<b>${nfLocal(lang, a.mileageK)} ${esc(d.ad_km)}</b>` : ''], [d.ad_color, uk(a.color)], [d.ad_gear, uk(a.gearbox)], [d.ad_drive, uk(a.drive)], [d.ad_engine, a.engine ? esc(`${a.engine} ${lang === 'en' ? 'L' : 'л'}${a.fuel ? ' · ' + a.fuel : ''}`) : ''], [d.ad_mod, uk(a.modification)], [d.ad_gen, uk(a.generation)]].filter(([, v]) => v);
   return `<section class="panel adinfo" aria-labelledby="h-ads"><h2 id="h-ads">${esc(d.ad_h)}</h2><dl class="kv">${cells.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>${verdict ? `<p class="tverdict ${verdict[0]}">${esc(fmt(d.ad_year_avg, { v: nfLocal(lang, Math.round(perYear)), t: verdict[1] }))}</p>` : ''}<p class="muted sm">${esc(d.ad_note)}</p></section>`;
 }
+// «Чи продається зараз»: факт и дата объявления с этим VIN — бесплатно; цена, пробег, регион и ссылка — в оплаченном отчёте
+function listingBlock(lang, r) {
+  const l = r.listing; if (!l) return '';
+  const d = dict(lang); const it = l.item;
+  if (!l.n || !it) return `<section class="panel" aria-labelledby="h-lst"><h2 id="h-lst">${esc(d.ls_h)}</h2><p>${esc(d.ls_none)}</p><p class="muted sm">${esc(d.ls_note)}</p></section>`;
+  const uk = (v) => (v ? `<span lang="uk">${esc(v)}</span>` : '');
+  const cells = [[d.ls_added, esc(it.added)], [d.ls_upd, esc(it.updated)]];
+  if (r.paidData) {
+    cells.push([d.ls_price, it.price ? `<b>$${nfLocal(lang, it.price)}</b>` : ''], [d.ls_mileage, it.mileageK ? `<b>${nfLocal(lang, it.mileageK)} ${esc(d.ad_km)}</b>` : ''], [d.ls_region, uk([it.region, it.city].filter(Boolean).join(', '))]);
+    if (it.url) cells.push([d.ls_link, `<a href="${esc(it.url)}" rel="nofollow noopener noreferrer" target="_blank">AUTO.RIA</a>`]);
+  }
+  return `<section class="panel adinfo" aria-labelledby="h-lst"><h2 id="h-lst">${esc(d.ls_h)}</h2><p><b>${esc(d.ls_yes)}</b></p><dl class="kv">${cells.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>${r.paidData ? '' : `<p class="muted sm">${ic.lock}${esc(d.ls_locked)}</p>`}<p class="muted sm">${esc(d.ls_note)}</p></section>`;
+}
 // рыночная цена в Украине: медиана, типичный диапазон (25–75 процентили), число объявлений
 function marketBlock(lang, r) {
   const m = r.market; if (!m) return '';
@@ -554,7 +567,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${listingBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${marketBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full

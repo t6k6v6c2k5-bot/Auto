@@ -79,5 +79,23 @@ export async function marketPrice(veh) {
   } catch (e) { console.error('market price', e.message); return null; }
 }
 
+// Активные объявления с этим VIN: поиск (1 запрос) + карточка первого объявления (1 запрос), кэш на 3 дня.
+// { n, item: { price, mileageK, region, city, added, updated, url } | null } или null при сбое/лимите. Объявления без указанного продавцом VIN не находятся.
+const LISTING_TTL = 3 * 864e5;
+export async function listingsByVin(vin) {
+  if (!cfg.riaKey || !/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) return null;
+  try {
+    return await cached('listing:' + vin, LISTING_TTL, async () => {
+      const s = await call('/search', { category_id: 1, 'VIN[0]': vin, countpage: 10 });
+      const ids = s?.result?.search_result?.ids; if (!Array.isArray(ids)) throw new Error('ria bad search response');
+      if (!ids.length) return { n: 0, item: null };
+      const j = await call('/info', { auto_id: ids[0] }); if (!j || j.error) throw new Error('ria bad info response');
+      const km = parseInt(String(j.autoData?.race || '').replace(/\D/g, ''), 10);
+      const link = typeof j.linkToView === 'string' && j.linkToView.startsWith('/') ? 'https://auto.ria.com' + j.linkToView : '';
+      return { n: Number(s.result.search_result.count) || ids.length, item: { price: Number(j.USD) || null, mileageK: km || null, region: j.stateData?.name || '', city: j.cityData?.name || '', added: String(j.addDate || '').slice(0, 10), updated: String(j.updateDate || '').slice(0, 10), url: link } };
+    });
+  } catch (e) { console.error('listing by vin', e.message); return null; }
+}
+
 // прогрев при старте: список марок в кэш, чтобы первый отчёт не ждал лишних запросов
 export const warmRia = () => { if (!cfg.riaKey) return; store.dropRiaMisses(); cached('marks', LIST_TTL, () => call('/categories/1/marks')).catch(() => {}); };
