@@ -126,7 +126,7 @@ export const waitlistByDay = (n) => all('SELECT strftime("%Y-%m-%d", created_at/
 
 export function dbInfo() {
   const t = (name) => one(`SELECT COUNT(*) c FROM ${name}`).c;
-  return { hits: t('hits'), searches: t('searches'), orders: t('orders'), waitlist: t('waitlist'), photos: one('SELECT SUM(url IS NOT NULL) f, SUM(url IS NULL) m FROM photos'), usa: t('usa_cache'), usaMonth: one('SELECT COUNT(*) c FROM usa_cache WHERE ts>?', Date.now() - 30 * 864e5).c, mentions: t('mentions') };
+  return { hits: t('hits'), searches: t('searches'), orders: t('orders'), waitlist: t('waitlist'), photos: one('SELECT SUM(url IS NOT NULL) f, SUM(url IS NULL) m FROM photos'), usa: t('usa_cache'), usaMonth: one('SELECT COUNT(*) c FROM usa_cache WHERE ts>?', Date.now() - 30 * 864e5).c, riaMonth: (() => { const r = one("SELECT json FROM ria_cache WHERE k=?", 'usage:' + new Date().toISOString().slice(0, 7)); return r ? Number(JSON.parse(r.json)) || 0 : 0; })(), mentions: t('mentions') };
 }
 
 // ручной сброс статистики из админки

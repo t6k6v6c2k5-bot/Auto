@@ -31,9 +31,8 @@ export const cfg = {
   operatorName: process.env.OPERATOR_NAME || '',            // ФОП/ТОВ, ЄДРПОУ, адреса — для оферты
   operatorDetails: process.env.OPERATOR_DETAILS || '',
   riaKey: process.env.RIA_API_KEY || '',                        // рыночные цены в Украине (открытый API объявлений)
-  riaDailyLimit: Number(process.env.RIA_DAILY_LIMIT) || 60,       // пакет ограничен 1000 запросами всего: тратим не больше 60 в сутки
-  riaHourlyLimit: Number(process.env.RIA_HOURLY_LIMIT) || 30,
-  riaPriceHourly: Number(process.env.RIA_PRICE_HOURLY) || 8,      // метод средней цены: 10 запросов в час, оставляем запас   // у бесплатного ключа есть часовой лимит; держим запас
+  riaHourlyLimit: Number(process.env.RIA_HOURLY_LIMIT) || 24,    // условия бесплатного пакета: 30 запросов в час на ключ, при превышении ключ блокируется
+  riaMonthlyLimit: Number(process.env.RIA_MONTHLY_LIMIT) || 850, // 1000 запросов в месяц; 150 оставляем на проверки владельца
   plausible: process.env.PLAUSIBLE_DOMAIN || '',
 };
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.

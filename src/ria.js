@@ -6,7 +6,10 @@ import * as store from './db.js';
 const BASE = 'https://developers.ria.com/auto';
 const UA = 'VINScope/1.0 (+https://vinscope.com.ua; vehicle check service)'; // честное имя клиента
 const LIST_TTL = 30 * 864e5, PRICE_TTL = 7 * 864e5, MISS_TTL = 3 * 864e5; // цены на рынке меняются медленно: неделя в кэше экономит ограниченный пакет запросов
-let chain = Promise.resolve(), last = 0, spent = { day: '', n: 0 }, hour = { h: -1, n: 0, price: 0 }, pausedUntil = 0;
+let chain = Promise.resolve(), last = 0, hour = { h: -1, n: 0 }, pausedUntil = 0;
+// расход за календарный месяц хранится в базе: перезапуск сервиса его не обнуляет (бесплатный пакет — 1000 запросов в месяц)
+const usageKey = () => 'usage:' + new Date().toISOString().slice(0, 7);
+export const riaUsed = () => { const r = store.getRia(usageKey()); return r ? Number(JSON.parse(r.json)) || 0 : 0; };
 
 export const norm = (s) => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-zа-яіїєґ0-9]/g, '');
 
@@ -33,15 +36,13 @@ export function stats(prices) {
 }
 
 async function call(path, params = {}) {
-  const day = new Date().toISOString().slice(0, 10); if (spent.day !== day) spent = { day, n: 0 };
-  if (spent.n >= cfg.riaDailyLimit) throw new Error('ria daily limit');
+  if (riaUsed() >= cfg.riaMonthlyLimit) throw new Error('ria monthly limit');
   if (Date.now() < pausedUntil) throw new Error('ria paused'); // источник сообщил о превышении лимита: не стучимся, пока не пройдёт пауза
-  const h = Math.floor(Date.now() / 3600e3); if (hour.h !== h) hour = { h, n: 0, price: 0 };
+  const h = Math.floor(Date.now() / 3600e3); if (hour.h !== h) hour = { h, n: 0 };
   if (hour.n >= cfg.riaHourlyLimit) throw new Error('ria hourly limit');
-  if (path === '/average_price') { if (hour.price >= cfg.riaPriceHourly) throw new Error('ria price hourly limit'); hour.price++; } // у метода «Середня ціна» свой часовой лимит (10)
   const run = chain.then(async () => {
     const wait = 350 - (Date.now() - last); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    last = Date.now(); spent.n++; hour.n++;
+    last = Date.now(); hour.n++; store.setRia(usageKey(), JSON.stringify(riaUsed() + 1));
     const u = new URL(BASE + path); u.searchParams.set('api_key', cfg.riaKey); Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
     const r = await fetch(u, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
     if (r.status === 429) { pausedUntil = Date.now() + 15 * 60e3; throw new Error('ria over limit'); }
@@ -72,7 +73,7 @@ export async function marketPrice(veh) {
     return await cached(`price:${markId}:${modelId}:${year}`, PRICE_TTL, async () => {
       const one = async (y) => { const j = await call('/average_price', { main_category: 1, marka_id: markId, model_id: modelId, yers: y }); if (!Array.isArray(j?.prices)) throw new Error('ria bad price response'); return j.prices; };
       let prices = await one(year), years = String(year);
-      if (prices.length < 8 && hour.price + 2 <= cfg.riaPriceHourly) { prices = [...prices, ...(await one(year - 1)), ...(await one(year + 1))]; years = `${year - 1}–${year + 1}`; } // мало объявлений: берём соседние годы
+      if (prices.length < 8 && hour.n + 2 <= cfg.riaHourlyLimit && riaUsed() + 2 <= cfg.riaMonthlyLimit) { prices = [...prices, ...(await one(year - 1)), ...(await one(year + 1))]; years = `${year - 1}–${year + 1}`; } // мало объявлений: берём соседние годы
       const s = stats(prices); return s ? { ...s, years } : null;
     });
   } catch (e) { console.error('market price', e.message); return null; }

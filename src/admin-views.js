@@ -162,6 +162,7 @@ function system(ctx) {
     `<tr><td>Реестр ТЗ (с VIN)</td><td>${nf(ctx.cov.records)} записей${ctx.cov.from ? ` · ${esc(ctx.cov.from)}–${esc(ctx.cov.to)}` : ''} ${ctx.cov.ready ? '<span class="pill ok">готов</span>' : '<span class="pill warn">грузится</span>'}</td></tr>`,
     `<tr><td>Загрузчик реестра</td><td>${ctx.regStatus.running ? 'работает: ' + esc(ctx.regStatus.current || '') : 'простаивает'}${ctx.regStatus.lastFinished ? ' · завершён ' + esc(A.fmtTs(Date.parse(ctx.regStatus.lastFinished) || ctx.regStatus.lastFinished)) : ''}</td></tr>`,
     `<tr><td>Кэш аукционов США</td><td>${nf(dbi.usa)} записей · запросов за 30 дней: ${nf(dbi.usaMonth)}${cfg.apibaraKey ? ' из 100' : ''}</td></tr>`,
+    `<tr><td>Рыночные цены (запросы за месяц)</td><td>${nf(dbi.riaMonth)} из ${cfg.riaMonthlyLimit} (лимит пакета 1000 в месяц, 30 в час)</td></tr>`,
     `<tr><td>Кэш фото</td><td>найдено ${nf(dbi.photos.f || 0)} · не найдено ${nf(dbi.photos.m || 0)}</td></tr>`,
     `<tr><td>Упоминания</td><td>${nf(dbi.mentions)}</td></tr>`])}</div>
 <div class="card"><h2>Объём хранилища</h2>${table(['Таблица', '#Строк'], [['Посещения (60 дней)', dbi.hits], ['Запросы проверок (90 дней)', dbi.searches], ['Заказы', dbi.orders], ['Лист ожидания', dbi.waitlist]].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${nf(v)}</td></tr>`))}<p class="sub" style="margin-top:10px">IP-адреса не сохраняются.</p></div></div>
