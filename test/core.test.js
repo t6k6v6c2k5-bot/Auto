@@ -206,3 +206,22 @@ test('данные из объявлений по VIN: разбор ответа
   assert.equal(parseChips({}), null);
   assert.equal(parseChips({ chipsData: { chips: [] } }), null);
 });
+
+
+test('комментарии: допускаются факты об авто, отклоняются контакты, ссылки, брань и спам', async () => {
+  const { validateComment } = await import('../src/comments.js');
+  const base = { key: '1HGCM82633A004352', kind: 'vin', cat: 'mileage' };
+  const ok = (text, extra = {}) => validateComment({ ...base, text, ...extra });
+  assert.equal(ok('На одометре 120 тысяч, а по сервисной книжке было 210 тысяч в 2021 году.').ok, true);
+  assert.equal(ok('Номер кузова этого авто 1HGCM82633A004352 совпал с документами, перебивки нет.').ok, true);
+  assert.equal(ok('Коротко').error, 'short');
+  assert.equal(ok('x'.repeat(401)).error, 'long');
+  assert.equal(ok('Звоните по номеру +380 67 123 45 67 всё расскажу про авто').error, 'contact');
+  assert.equal(ok('Подробности на сайте www.example.com обязательно посмотрите').error, 'contact');
+  assert.equal(ok('Пишите в телеграм @seller_name расскажу про это авто всё').error, 'contact');
+  assert.equal(ok('Этот владелец полный мудак и водит как хочет, никому не советую').error, 'rude');
+  assert.equal(ok('аааааааааааааааааааааааааа бббббббббббббб').error, 'spam');
+  assert.equal(ok('ЭТО АВТО БИТОЕ И С СКРУЧЕННЫМ ПРОБЕГОМ НЕ ПОКУПАЙТЕ ЕГО НИ ЗА КАКИЕ ДЕНЬГИ').error, 'caps');
+  assert.equal(ok('Нормальный текст про авто и его пробег, достаточно длинный', { cat: 'zzz' }).error, 'cat');
+  assert.equal(ok('Нормальный текст про авто и его пробег, достаточно длинный', { key: 'bad key' }).error, 'bad');
+});

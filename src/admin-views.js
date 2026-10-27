@@ -4,9 +4,10 @@ import { statSync } from 'node:fs';
 import { cfg, price } from './config.js';
 import { esc } from './views.js';
 import * as A from './analytics.js';
+import * as CM from './comments.js';
 
 const nf = (n) => Number(n || 0).toLocaleString('uk-UA');
-const TABS = [['overview', 'Обзор'], ['traffic', 'Трафик'], ['checks', 'Проверки'], ['orders', 'Заказы и лиды'], ['system', 'Система']];
+const TABS = [['overview', 'Обзор'], ['traffic', 'Трафик'], ['checks', 'Проверки'], ['orders', 'Заказы и лиды'], ['comments', 'Комментарии'], ['system', 'Система']];
 const DEV = { mobile: 'Телефон', desktop: 'Компьютер', tablet: 'Планшет', bot: 'Боты' };
 const LANG = { uk: 'Українська', ru: 'Русский', en: 'English' };
 const NOTE = { vin: 'Проверка по VIN', plate: 'По номеру (найден)', 'plate-nl': 'По номеру (Нидерланды)', 'plate-nf': 'Номер не найден', invalid: 'Неверный ввод', limited: 'Лимит запросов' };
@@ -71,6 +72,7 @@ function alerts(ctx, d7) {
   const miss = [['SUPPORT_EMAIL', cfg.supportEmail], ['OPERATOR_NAME', cfg.operatorName], ['OPERATOR_DETAILS', cfg.operatorDetails]].filter(([, v]) => !v).map(([k]) => k);
   if (miss.length) push('warn', `Не заданы контакты оператора для оферты: ${miss.join(', ')}.`);
   const dbi = A.dbInfo(); if (cfg.apibaraKey && dbi.usaMonth >= 80) push('warn', `Лимит аукционных запросов за 30 дней: использовано ${dbi.usaMonth} из 100 бесплатных.`);
+  const pc = CM.counts().pending || 0; if (pc) push('warn', `Комментарии ждут модерации: ${pc}. <a href="?tab=comments">Открыть очередь</a>.`);
   if (!ctx.paywall) push('ok', 'Платная оплата выключена: полный отчёт открыт бесплатно (платные поставщики не вызываются).');
   if (!out.length) push('ok', 'Критичных проблем не найдено.');
   return out.join('');
@@ -126,6 +128,17 @@ function checks(ctx, n) {
 <div class="card" style="margin-top:14px"><h2>Последние запросы</h2>${table(['Время (Киев)', 'VIN / номер', 'Язык'], rec.map((r) => `<tr><td>${esc(A.fmtTs(r.created_at))}</td><td class="mono"><a href="/${esc(r.lang)}/check?q=${encodeURIComponent(r.vin)}" rel="noreferrer">${esc(r.vin)}</a></td><td>${esc((r.lang || '').toUpperCase())}</td></tr>`))}</div>`;
 }
 
+function commentsTab() {
+  const c = CM.counts(), pend = CM.pendingList(100), rec = CM.recentList(30);
+  const T = CM.cmText('ru');
+  const act = (id, what, label, cls = '') => `<form method="post" action="/admin/comment" style="display:inline"><input type="hidden" name="id" value="${id}"><input type="hidden" name="what" value="${what}"><button class="btn ${cls}" style="padding:4px 10px;font-size:13px">${label}</button></form>`;
+  const row = (r, actions) => `<tr><td>${esc(A.fmtTs(r.created_at))}</td><td class="mono"><a href="/uk/check?q=${encodeURIComponent(r.key)}" target="_blank" rel="noreferrer">${esc(r.key)}</a></td><td>${esc(T.cats[r.cat] || r.cat)}</td><td style="min-width:240px;white-space:pre-wrap">${esc(r.text)}</td><td class="n">${r.reports || 0}</td><td style="white-space:nowrap">${actions}</td></tr>`;
+  return `<h1>Комментарии</h1><p class="sub">Предварительная модерация: на сайте появляются только одобренные. Три жалобы возвращают комментарий в очередь. Правила: только об авто, без контактов, имён и оценок водителя или владельца.</p>
+<div class="grid k4" style="margin-bottom:14px">${kpi('В очереди', nf(c.pending || 0), 'ждут решения')}${kpi('Опубликовано', nf(c.approved || 0), '')}${kpi('Скрыто', nf(c.hidden || 0), 'удаляются через 90 дней')}${kpi('Лента', '<a href="/uk/comments" target="_blank" rel="noreferrer">открыть ↗</a>', 'публичная страница')}</div>
+<div class="card" style="margin-bottom:14px"><h2>Ожидают модерации</h2>${table(['Когда', 'VIN / номер', 'Тема', 'Текст', '#Жалоб', 'Действие'], pend.map((r) => row(r, act(r.id, 'approve', 'Одобрить') + ' ' + act(r.id, 'hide', 'Скрыть', 'ghost'))), 'Очередь пуста')}</div>
+<div class="card"><h2>Недавние решения</h2>${table(['Когда', 'VIN / номер', 'Тема', 'Текст', '#Жалоб', 'Действие'], rec.map((r) => row(r, (r.status === 'approved' ? act(r.id, 'hide', 'Скрыть', 'ghost') : act(r.id, 'approve', 'Вернуть')) + ' ' + act(r.id, 'delete', 'Удалить', 'ghost'))), 'Пока ничего')}</div>`;
+}
+
 function orders(ctx) {
   const o = ctx.stats, rows = A.ordersAll(100), cr = A.creditsSummary(), wl = A.waitlistAll(200);
   const stat = { paid: 'ok', credit: 'ok', pending: 'warn', refunded: 'bad', failed: 'bad' };
@@ -176,6 +189,6 @@ function system(ctx) {
 export function adminPage(tab, d, ctx) {
   const t = TABS.some(([k]) => k === tab) ? tab : 'overview';
   const nav = TABS.map(([k, l]) => `<a href="?tab=${k}" class="${k === t ? 'on' : ''}">${esc(l)}</a>`).join('');
-  const body = t === 'traffic' ? traffic(ctx, [1, 7, 30].includes(d) ? d : 7) : t === 'checks' ? checks(ctx, [7, 30, 60].includes(d) ? d : 30) : t === 'orders' ? orders(ctx) : t === 'system' ? system(ctx) : overview(ctx);
+  const body = t === 'traffic' ? traffic(ctx, [1, 7, 30].includes(d) ? d : 7) : t === 'checks' ? checks(ctx, [7, 30, 60].includes(d) ? d : 30) : t === 'orders' ? orders(ctx) : t === 'comments' ? commentsTab() : t === 'system' ? system(ctx) : overview(ctx);
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>VINScope — админка</title><style>${css}</style></head><body><div class="shell"><aside><b>VINScope</b>${nav}<a href="/uk/" target="_blank" rel="noopener" style="margin-top:14px">Открыть сайт ↗</a><small>Админка · только для владельца</small></aside><main>${body}</main></div></body></html>`;
 }

@@ -4,6 +4,7 @@ import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
 import { guidesHub, guidePage } from './src/guides-views.js';
 import { warmRia } from './src/ria.js';
+import * as cm from './src/comments.js';
 import { GUIDES, GG } from './src/guides.js';
 import { nbuRate } from './src/nbu.js';
 import { getPhoto } from './src/photo.js';
@@ -181,6 +182,7 @@ async function page(req, res, url, lang, rest) {
     const id = rest.slice(7);
     return html(toolPage(req, lang, id, { rate: id === 'customs' ? await nbuRate() : null }));
   }
+  if (rest === '/comments') return html(cm.commentsPage(req, lang), 200, 'public, max-age=60', NOINDEX);
   if (rest === '/guides') return html(guidesHub(req, lang));
   if (rest.startsWith('/guides/') && GUIDES.includes(rest.slice(8))) return html(guidePage(req, lang, rest.slice(8)));
   if (rest === '/usa') return html(V.usaPage(req, lang));
@@ -216,7 +218,7 @@ async function page(req, res, url, lang, rest) {
     req.evNote = 'plate';
     if (!isBotReq(req)) store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
-    if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
+    if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}${url.searchParams.get('c') ? '&c=' + encodeURIComponent(url.searchParams.get('c')).slice(0, 12) : ''}`);
     const hist = historyByPlate(plate);
     if (hist.rows.length) {
       const v0 = hist.groups[0]?.summary.vehicle || {};
@@ -307,6 +309,39 @@ function admin(req, res, url) {
   send(req, res, 200, adminPage(url.searchParams.get('tab') || 'overview', Number(url.searchParams.get('d')) || 0, ctx), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
 }
 // сброс счётчиков: только POST с того же origin (браузер сам подставляет Basic-доступ, поэтому защищаем от CSRF)
+// форма коментаря: той самий origin, urlencoded, приманка для ботів, ліміт частоти, мінімальний час заповнення
+const sameOrigin = (req) => { try { return new URL(req.headers.origin || req.headers.referer || '').host === req.headers.host; } catch { return false; } };
+const KEY_RE = /^[A-Z0-9]{5,17}$/;
+async function readForm(req, res) {
+  if (!sameOrigin(req)) { send(req, res, 403, 'Forbidden', 'text/plain'); return null; }
+  if (!/^application\/x-www-form-urlencoded/i.test(req.headers['content-type'] || '')) { send(req, res, 415, 'Unsupported', 'text/plain'); return null; }
+  return new URLSearchParams(await readBody(req, 8192));
+}
+async function commentPost(req, res) {
+  const f = await readForm(req, res); if (!f) return;
+  const lang = LANGS.includes(f.get('lang')) ? f.get('lang') : 'uk';
+  const key = String(f.get('key') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const back = (code) => redirect(res, `/${lang}/check?q=${encodeURIComponent(KEY_RE.test(key) ? key : '')}&c=${code}#comments`, 303);
+  if (limited('cmt:' + ipOf(req), 3)) return back('fast');
+  if (f.get('website')) return back('ok'); // приманка заповнена: робимо вигляд, що прийняли
+  const age = Date.now() - Number(f.get('t')); if (!(age >= 3000 && age < 6 * 3600e3)) return back('fast');
+  return back(cm.addComment({ key, kind: f.get('kind'), cat: f.get('cat'), text: f.get('text'), lang, ip: ipOf(req) }));
+}
+async function commentReport(req, res) {
+  const f = await readForm(req, res); if (!f) return;
+  const lang = LANGS.includes(f.get('lang')) ? f.get('lang') : 'uk';
+  const key = String(f.get('key') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!limited('cmr:' + ipOf(req), 10) && /^\d{1,9}$/.test(f.get('id') || '')) cm.report(f.get('id'));
+  return redirect(res, `/${lang}/check?q=${encodeURIComponent(KEY_RE.test(key) ? key : '')}&c=rep#comments`, 303);
+}
+// модерація з адмінки: тільки власник (Basic) і той самий origin
+async function adminComment(req, res) {
+  if (!adminAuth(req, res)) return;
+  const f = await readForm(req, res); if (!f) return;
+  const id = f.get('id'), what = f.get('what');
+  if (/^\d{1,9}$/.test(id || '')) { if (what === 'approve') cm.setStatus(id, 'approved'); else if (what === 'hide') cm.setStatus(id, 'hidden'); else if (what === 'delete') cm.remove(id); }
+  return redirect(res, '/admin?tab=comments', 303);
+}
 async function adminReset(req, res) {
   if (!adminAuth(req, res)) return;
   let same = false; try { same = new URL(String(req.headers.origin || '')).host === req.headers.host; } catch { /* нет origin */ }
@@ -343,6 +378,9 @@ const server = createServer(async (req, res) => {
     if (pathname === '/admin') return admin(req, res, url);
     if (pathname === '/admin/waitlist.csv') return adminWaitlist(req, res);
     if (pathname === '/admin/reset' && req.method === 'POST') return adminReset(req, res);
+    if (pathname === '/admin/comment' && req.method === 'POST') return adminComment(req, res);
+    if (pathname === '/comment' && req.method === 'POST') return commentPost(req, res);
+    if (pathname === '/comment/report' && req.method === 'POST') return commentReport(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
     if (pathname === '/webhook/lemon' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);
@@ -410,5 +448,5 @@ server.listen(cfg.port, '0.0.0.0', () => {
   console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);
   startWanted(); startRegistry();
   warmRia();
-  const purge = () => { store.purgeOld(); purgeHits(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
+  const purge = () => { store.purgeOld(); purgeHits(); cm.purgeComments(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
 });

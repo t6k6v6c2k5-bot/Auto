@@ -591,3 +591,21 @@ ul.scams{margin-left:auto;margin-right:auto}
 }
 @media(max-width:1020px) and (prefers-color-scheme:light){.bento>li.big{background:var(--surface)}}
 @media(max-width:1020px){@supports not (background:color-mix(in srgb,red,blue)){.bento>li.big .fi{background:rgba(47,107,255,.14)}}}
+
+/* комментарии об авто */
+.comments .cm-msg{padding:10px 14px;border-radius:12px;margin:10px 0;font-size:14.5px}.cm-msg.ok{background:var(--good-bg);color:var(--good)}.cm-msg.err{background:var(--bad-bg);color:var(--bad)}
+.cm-list,.cm-feed{list-style:none;margin:12px 0;padding:0;display:grid;gap:10px}
+.cm-list li,.cm-feed li{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}
+.cm-list p,.cm-feed p{margin:6px 0 4px;font-size:15.5px;color:var(--ink);overflow-wrap:anywhere}
+.cm-top{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}
+.cm-cat{font-weight:700;padding:2px 10px;border-radius:99px;background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--link)}
+.cm-rep{background:none;border:0;padding:6px 0;font:inherit;font-size:12.5px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.cm-key{display:inline-block;font:700 15px ui-monospace,Menlo,monospace;letter-spacing:.05em;margin-bottom:6px;color:var(--link)}
+.cm-add{margin:12px 0;padding:0 16px}.cm-add summary{font-weight:700;padding:14px 0;min-height:48px;cursor:pointer}.cm-form{padding-bottom:16px;display:grid;gap:12px}
+.cm-form fieldset{border:0;padding:0;margin:0}.cm-form legend{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.cm-cats{display:flex;flex-wrap:wrap;gap:8px}.cm-cats label{position:relative}.cm-cats input{position:absolute;opacity:0;inset:0}
+.cm-cats span{display:inline-block;padding:9px 14px;min-height:40px;border:1px solid var(--line-2);border-radius:99px;font-size:14px;font-weight:600;color:var(--ink-2);background:var(--surface);cursor:pointer}
+.cm-cats input:checked+span{background:var(--blue);border-color:var(--blue);color:#fff}.cm-cats input:focus-visible+span{outline:3px solid var(--blue);outline-offset:2px}
+.cm-form textarea{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface);color:var(--ink);resize:vertical;min-height:110px}
+.cm-honey{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media print{.comments{display:none}}

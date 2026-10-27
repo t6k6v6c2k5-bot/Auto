@@ -671,3 +671,7 @@ Object.assign(D.en, { ad_h: 'Data from listings', ad_region: 'Region of the late
 Object.assign(D.uk, { pd_ads: 'Чи продавалося авто в оголошеннях: пробіг, регіон, колір, модифікація', pd_market: 'Ринкова ціна в Україні: медіана та діапазон за оголошеннями' });
 Object.assign(D.ru, { pd_ads: 'Продавалось ли авто в объявлениях: пробег, регион, цвет, модификация', pd_market: 'Рыночная цена в Украине: медиана и диапазон по объявлениям' });
 Object.assign(D.en, { pd_ads: 'Whether the car was advertised for sale: mileage, region, colour, trim', pd_market: 'Market price in Ukraine: median and range from listings' });
+
+Object.assign(D.uk, { nav_comments: 'Коментарі' });
+Object.assign(D.ru, { nav_comments: 'Комментарии' });
+Object.assign(D.en, { nav_comments: 'Comments' });
