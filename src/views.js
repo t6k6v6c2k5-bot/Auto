@@ -71,7 +71,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=36">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=37">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -393,7 +393,7 @@ function insuranceBlock(lang, r) {
 function paidBlock(lang, r) {
   if (r.paidData) return '';
   const d = dict(lang);
-  const items = [r.usMarket && providerEnabled() && d.pd_usa, insuranceEnabled() && d.pd_ins, mentionsEnabled() && d.pd_web].filter(Boolean);
+  const items = [r.usMarket && providerEnabled() && d.pd_usa, cfg.riaKey && cfg.riaUserId && d.pd_ads, cfg.riaKey && d.pd_market, insuranceEnabled() && d.pd_ins, mentionsEnabled() && d.pd_web].filter(Boolean);
   if (!items.length) return '';
   const cta = paywallOn()
     ? `<a class="btn primary wide" href="/${lang}/checkout?plan=single&amp;vin=${encodeURIComponent(r.vin)}">${esc(d.pd_btn)} — ${price(PLANS.single.amount)}</a>`
@@ -553,7 +553,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
     ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
-    : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${marketBlock(lang, r)}${safetyBlock(lang, r, false)}`;
+    : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
     ? `${toc}${actionsBlock(lang)}<div class="panel noprint"><h2>${esc(TT[lang].nav)}</h2>${toolCards(lang)}</div>`
