@@ -24,7 +24,7 @@ import { ipOf, limited, origin, send, json, redirect, readBody, serveStatic } fr
 import * as store from './src/db.js';
 import * as stripe from './src/stripe.js';
 import * as V from './src/views.js';
-import { track, purgeHits, waitlistAll, fmtTs } from './src/analytics.js';
+import { track, purgeHits, waitlistAll, fmtTs, isBotReq } from './src/analytics.js';
 import { adminPage } from './src/admin-views.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -195,7 +195,7 @@ async function page(req, res, url, lang, rest) {
     const v = validateVin(raw);
     if (v.ok) {
       req.evNote = 'vin';
-      store.logSearch(v.vin, lang);
+      if (!isBotReq(req)) store.logSearch(v.vin, lang); // запросы ботов и скриптов в статистику проверок не идут
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
       const r = await buildReport(v.vin, { withProvider: false, plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // платные источники — только в оплаченном отчёте
       // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
@@ -213,7 +213,7 @@ async function page(req, res, url, lang, rest) {
     const plate = normalizePlate(raw);
     if (!looksLikePlate(plate) && !looksLikeNlPlate(plate)) { req.evNote = 'invalid'; return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`); }
     req.evNote = 'plate';
-    store.logSearch(plate, lang);
+    if (!isBotReq(req)) store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
     const hist = historyByPlate(plate);

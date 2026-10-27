@@ -62,7 +62,7 @@ export const logSearch = (vin, lang) => {
 };
 export const searchCount = (vin, days = 30) => db.prepare('SELECT COUNT(*) c FROM searches WHERE vin=? AND created_at>?').get(vin, Date.now() - days * 864e5).c;
 export const stats = () => ({
-  paid: db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(amount),0) s FROM orders WHERE status IN ('paid','credit') AND stripe_session IS NOT NULL`).get(),
+  paid: db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(amount),0) s FROM orders WHERE status IN ('paid','credit') AND stripe_session IS NOT NULL AND COALESCE(email,'') NOT LIKE '%@example.com'`).get(), // тестовые заказы выручкой не считаем
   byStatus: db.prepare('SELECT status, COUNT(*) c FROM orders GROUP BY status').all(),
   waitlist: db.prepare('SELECT COUNT(*) c FROM waitlist').get().c,
   searches: db.prepare('SELECT COUNT(*) c FROM searches').get().c,

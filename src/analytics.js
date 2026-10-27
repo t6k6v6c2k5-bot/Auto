@@ -23,6 +23,7 @@ export const daysBack = (n) => Array.from({ length: n }, (_, i) => dayOf(Date.no
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|bytespider|barkrowler|dataprovider|seokicks|ahrefs|semrush|mj12|dotbot|blexbot|serpstat|netestate|zoominfo|scrapy|httpclient|libwww|requests|http-client|nmap|masscan|nikto|sqlmap|zgrab|censys|shodan|expanse|phantom|selenium|puppeteer|playwright|check_http|^$/i;
 // настоящий браузер всегда шлёт Accept-Language; его отсутствие у «браузерного» UA — признак скрипта
 const isBot = (ua, h) => BOT.test(ua) || !h['accept-language'];
+export const isBotReq = (req) => isBot(String(req.headers['user-agent'] || ''), req.headers);
 const devOf = (ua, h = { 'accept-language': 'x' }) => (isBot(ua, h) ? 'bot' : /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop');
 // короткое имя клиента для диагностики: имя бота либо семейство браузера
 const agentOf = (ua) => {
