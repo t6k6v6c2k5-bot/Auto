@@ -532,3 +532,10 @@ ul.scams{margin-left:auto;margin-right:auto}
   .verdict.low{border-color:var(--good)}.verdict.mid{border-color:var(--warn)}.verdict.high{border-color:var(--bad)}
   .paidteaser{background:var(--surface)}
 }
+/* аудит: длинное содержимое не раздвигает сетку страницы (320 px), цели касания ближе к 44 px, контраст подписи в карточках */
+.two>*,.vhead>div,.panel{min-width:0}
+.langs a{min-height:40px;min-width:40px}
+@media(max-width:360px){.langs a{min-width:36px;padding:0 8px}}
+.examples button{min-height:40px;padding-top:8px;padding-bottom:8px}
+.foot-col a{padding:9px 0}
+.guide small{color:var(--link)}
