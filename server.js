@@ -318,7 +318,7 @@ async function adminReport(req, res, url) {
 function admin(req, res, url) {
   if (!adminAuth(req, res)) return;
   const ctx = { stats: store.stats(), wanted: wantedState, cov: coverage(), regStatus, paywall: paywallOn(), provider: payProvider() };
-  send(req, res, 200, adminPage(url.searchParams.get('tab') || 'overview', Number(url.searchParams.get('d')) || 0, ctx), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'set-cookie': 'vs_own=1; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax', ...NOINDEX });
+  send(req, res, 200, adminPage(url.searchParams.get('tab') || 'overview', Number(url.searchParams.get('d')) || 0, ctx), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'same-origin', 'set-cookie': 'vs_own=1; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax', ...NOINDEX });
 }
 // сброс счётчиков: только POST с того же origin (браузер сам подставляет Basic-доступ, поэтому защищаем от CSRF)
 // форма коментаря: той самий origin, urlencoded, приманка для ботів, ліміт частоти, мінімальний час заповнення
