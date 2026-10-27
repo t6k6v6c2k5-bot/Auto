@@ -167,6 +167,10 @@
   } else rev.forEach((el) => el.classList.add('in'));
   if (location.hash === '#notify') track('pricing_notify_click');
 
+  // ---------- Пример отчёта: если фото лота недоступно, показываем карточку без галереи ----------
+  const gal = $('.pv-gal');
+  if (gal) document.addEventListener('error', (e) => { if (e.target && e.target.matches && e.target.matches('.pv-gal img')) { e.target.hidden = true; if (e.target.classList.contains('pv-ph')) gal.hidden = true; } }, true);
+
   // ---------- Кнопка «Наверх»: появляется после прокрутки на пару экранов ----------
   const up = $('#totop');
   if (up) {

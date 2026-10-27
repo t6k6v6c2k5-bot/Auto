@@ -71,7 +71,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=31">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=33">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -91,7 +91,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 ${sticky}
 <button class="totop" id="totop" type="button" hidden aria-label="${esc(t(lang, 'to_top'))}" title="${esc(t(lang, 'to_top'))}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
-<script src="/app.js?v=6" defer data-lang="${lang}"></script></body></html>`;
+<script src="/app.js?v=7" defer data-lang="${lang}"></script></body></html>`;
 }
 
 // ---------- поиск ----------
@@ -136,20 +136,36 @@ const sourcesList = (lang) => `<ul class="srclist">${dict(lang).srcs.map(([n, m,
 const h1Html = (txt) => esc(txt).replace(/\*(.+?)\*/g, '<span class="grad">$1</span>');
 
 // ---------- публичные страницы ----------
-// пример отчёта в шапке: настоящий движок оценки на типовых данных (Toyota Camry 2012), ссылка ведёт на живой бесплатный отчёт
-const PV_VIN = '4T1BF1FKXCU528157';
+// пример расширенного отчёта (авто из США) в шапке: реальные данные одного лота + настоящий движок Risk Score.
+// Данные зафиксированы, платные запросы при показе страницы не выполняются; фото идут через прокси из кэша.
+const PV_VIN = '5YFT4MCE8MP095595';
+const PV = { lot: '45273158', photos: 12, lots: 9, last: 3050, miles: 91333, prices: [6650, 6250, 5950, 5600, 6100, 6600, 6250, 5150, 3050] };
+function sparkline(vals) {
+  const W = 300, H = 74, pad = 8, lo = Math.min(...vals), hi = Math.max(...vals);
+  const x = (i) => pad + (i * (W - 2 * pad)) / (vals.length - 1), y = (v) => H - pad - ((v - lo) / (hi - lo || 1)) * (H - 2 * pad - 6);
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const area = `${x(0).toFixed(1)},${H - 4} ${pts.join(' ')} ${x(vals.length - 1).toFixed(1)},${H - 4}`;
+  const lx = x(vals.length - 1), ly = y(vals[vals.length - 1]);
+  return `<svg viewBox="0 0 ${W} ${H}" class="pv-spark" preserveAspectRatio="none" ${A}><defs><linearGradient id="pvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fa2ff" stop-opacity=".45"/><stop offset="1" stop-color="#7fa2ff" stop-opacity="0"/></linearGradient></defs><polygon points="${area}" fill="url(#pvg)"/><polyline points="${pts.join(' ')}" fill="none" stroke="#9db9ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="4" fill="#fbbf24" stroke="#0b1d3b" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+}
 function previewCard(lang) {
-  const d = dict(lang); const C = 2 * Math.PI * 52;
-  const risk = riskScore({ decoded: { trusted: true, found: true, year: 2012 }, recalls: [{}, {}], wanted: [], ua: null, complaints: { fires: 6 }, mismatch: null, local: false, usa: null });
+  const d = dict(lang); const C = 2 * Math.PI * 20;
+  const risk = riskScore({ decoded: { trusted: true, found: true, year: 2021 }, recalls: [{}], wanted: [], ua: null, complaints: { fires: 0 }, mismatch: null, local: false, usa: null });
   const col = risk.level === 'high' ? '#ef4444' : risk.level === 'mid' ? '#f59e0b' : '#10b981';
   const ico = { ok: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', na: '<path d="M5 12h14"/>', warn: '<path d="M12 7v6M12 17h.01"/>' };
-  return `<a class="pv" href="/${lang}/check?q=${PV_VIN}" aria-label="${esc(d.pv_aria)}"><div class="pv-top"><span class="pv-tag">${esc(d.pv_tag)}</span><span class="pv-vin">${PV_VIN.slice(0, 4)}…${PV_VIN.slice(-4)}</span></div>
+  const img = (i, cls, eager) => `<img class="${cls}" src="/api/lotimg?v=${PV_VIN}&i=${i}" alt="" width="640" height="400" decoding="async"${eager ? ' fetchpriority="low"' : ' loading="lazy"'}>`;
+  const price = `$${nfLocal(lang, PV.last)}`;
+  return `<a class="pv pv-us" href="#q-a" aria-label="${esc(d.pv_aria)}"><div class="pv-top"><span class="pv-tag">${esc(d.pv_tag)}</span><span class="pv-vin">${PV_VIN.slice(0, 4)}…${PV_VIN.slice(-4)}</span></div>
+<div class="pv-gal"><div class="pv-hero">${img(0, 'pv-ph', true)}<span class="pv-lot">${esc(d.pv_lot)} ${PV.lot}</span><span class="pv-cnt">${PV.photos} ${esc(d.pv_photos)}</span></div><div class="pv-thumbs">${[1, 2, 3].map((i) => img(i, 'pv-th', false)).join('')}<span class="pv-more">+${PV.photos - 4}</span></div></div>
+<p class="pv-note">${esc(d.pv_note)}</p>
 <p class="pv-car"><b>${esc(d.pv_title)}</b>${d.pv_chips.map((c) => `<i>${esc(c)}</i>`).join('')}</p>
-<div class="pv-main"><svg viewBox="0 0 120 120" class="pv-g" ${A}><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="11"/><circle cx="60" cy="60" r="52" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(C * risk.score) / 100} ${C}" transform="rotate(-90 60 60)"/><text x="60" y="68" text-anchor="middle" font-size="34" font-weight="800" fill="#fff">${risk.score}</text></svg><div><span class="pv-k">Risk Score</span><b class="pv-lvl" style="color:${col}">${esc(d['risk_' + risk.level])}</b><ul class="pv-f" role="list">${risk.factors.map((f) => `<li><em>+${f.pts}</em>${esc(t(lang, f.key, f.vars))}</li>`).join('')}</ul></div></div>
-<ul class="pv-rows" role="list">${d.pv_rows.map(([k, v, st]) => `<li class="${st}"><span class="pv-ic" ${A}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}>${ico[st]}</svg></span><span>${esc(k)}</span><b>${esc(v)}</b></li>`).join('')}</ul>
-<p class="pv-next"><span>${esc(d.pv_next_h)}</span>${esc(d.c_recalls)}</p>
-<span class="pv-open">${esc(d.pv_open)} <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>`;
+<ul class="pv-kpi" role="list"><li><span>${esc(d.pv_lots)}</span><b>${PV.lots}</b></li><li><span>${esc(d.pv_price)}</span><b>${price}</b></li><li><span>${esc(d.pv_mile)}</span><b>${nfLocal(lang, PV.miles)} <small>${esc(d.pv_km)}</small></b></li></ul>
+<div class="pv-chart"><span class="pv-k">${esc(d.pv_chart)}</span>${sparkline(PV.prices)}<div class="pv-axis"><span>$${nfLocal(lang, PV.prices[0])}</span><span>$${nfLocal(lang, PV.last)}</span></div></div>
+<div class="pv-verdict"><svg viewBox="0 0 52 52" class="pv-mg" ${A}><circle cx="26" cy="26" r="20" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/><circle cx="26" cy="26" r="20" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * risk.score) / 100} ${C}" transform="rotate(-90 26 26)"/><text x="26" y="31" text-anchor="middle" font-size="15" font-weight="800" fill="#fff">${risk.score}</text></svg><div><span class="pv-k">Risk Score</span><b style="color:${col}">${esc(d['risk_' + risk.level])}</b></div>
+<ul class="pv-rows" role="list">${d.pv_rows.map(([k, v, st]) => `<li class="${st}"><span class="pv-ic" ${A}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}>${ico[st]}</svg></span><span>${esc(k)}</span><b>${esc(v)}</b></li>`).join('')}</ul></div>
+<span class="pv-open">${esc(d.pv_cta)} <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>`;
 }
+const nfLocal = (lang, n) => Number(n).toLocaleString(lang === 'en' ? 'en-US' : lang === 'ru' ? 'ru-RU' : 'uk-UA');
 
 export function home(req, lang, stats, opts = {}) {
   const d = dict(lang);

@@ -546,3 +546,28 @@ ul.scams{margin-left:auto;margin-right:auto}
 .examples button,.recent a{min-height:44px}
 @media(min-width:380px){.langs a{min-height:44px;min-width:44px}}
 @media(max-width:860px){.sheet a,.nav a{min-height:44px}}
+
+/* пример отчёта по авто из США: фото лота, ключевые цифры, график цен */
+.pv-us{width:min(100%,470px);padding:20px}
+.pv-gal{margin:0 0 6px}.pv-hero{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:16/10;background:linear-gradient(135deg,#17315e,#0c1c39);border:1px solid rgba(255,255,255,.14)}
+.pv-ph{display:block;width:100%;height:100%;object-fit:cover}
+.pv-lot,.pv-cnt{position:absolute;font-size:11.5px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;background:rgba(6,14,30,.72);color:#e6eeff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14)}
+.pv-lot{left:10px;bottom:10px}.pv-cnt{right:10px;top:10px}
+.pv-thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}
+.pv-th,.pv-more{display:block;width:100%;aspect-ratio:16/10;border-radius:10px;object-fit:cover;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+.pv-more{display:grid;place-items:center;font-weight:800;font-size:15px;color:#c6d4ee}
+.pv-note{margin:6px 2px 12px;font-size:11.5px;color:#8fa6d3}
+.pv-us .pv-car{margin-bottom:12px}.pv-us .pv-car b{font-size:21px}
+.pv-kpi{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pv-kpi li{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);min-width:0}
+.pv-kpi span{display:block;font-size:11.5px;color:#9db3d8;line-height:1.3;margin-bottom:3px}.pv-kpi b{display:block;font-size:19px;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}.pv-kpi small{font-size:12px;font-weight:600;color:#9db3d8}
+.pv-chart{margin:0 0 12px;padding:10px 12px 6px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.pv-spark{display:block;width:100%;height:62px;margin-top:4px}.pv-axis{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#c6d4ee;font-variant-numeric:tabular-nums}
+.pv-verdict{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;margin-bottom:12px}
+.pv-mg{width:54px;height:54px;grid-row:span 1}.pv-verdict>div:first-of-type b{display:block;font-size:17px;letter-spacing:-.01em}
+.pv-verdict .pv-rows{grid-column:1/-1;margin:4px 0 0}
+.pv-us .pv-open{display:flex;justify-content:center;padding:11px 14px;border-radius:12px;background:var(--amber);color:#1a1204;font-weight:800;margin-top:2px}.pv-us .pv-open svg{color:#1a1204}
+@media(max-width:1020px){.pv-us{max-width:500px}}
+@media(max-width:420px){.pv-us{padding:16px}.pv-kpi b{font-size:17px}.pv-kpi li{padding:9px 10px}}
+@media print{.pv-gal{display:none}}
+.pv-th{height:auto}
