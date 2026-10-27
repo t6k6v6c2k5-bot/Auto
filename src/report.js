@@ -5,6 +5,7 @@ import { findMentions } from './mentions.js';
 import { fuelEconomy } from './fueleco.js';
 import { canadaRecalls } from './canada.js';
 import { marketPrice } from './ria.js';
+import { adsByVin } from './riavin.js';
 import { nbuRate } from './nbu.js';
 import { decodeVin, recalls as getRecalls, complaints as getComplaints, ratings as getRatings } from './nhtsa.js';
 import { historyByVin, coverage } from './registry.js';
@@ -65,7 +66,7 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
   const regPlate = plate || ua.summary?.plates?.at(-1) || '';
   // поиск фото в первый раз может идти дольше 3 с: отчёт не ждёт, снимок сохранится в кэше для следующего открытия
   const photoP = veh.make ? withDeadline(getPhoto(veh.make, veh.model, veh.year).catch(() => null), 3000, null) : Promise.resolve(null);
-  const [rec, comp, rate, fuel, ca, insurance, mentions, photo, market, fx] = await Promise.all([
+  const [rec, comp, rate, fuel, ca, insurance, mentions, photo, market, fx, adInfo] = await Promise.all([
     withDeadline(getRecalls(decoded), left(), { items: [], unavailable: true }),
     withDeadline(getComplaints(decoded), left(), { count: 0, unavailable: true }),
     withDeadline(getRatings(decoded), left(), null),
@@ -78,6 +79,8 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
     // рыночная цена в Украине (бесплатный источник с кэшем): отчёт не ждёт дольше пары секунд
     wantMarket && veh.make && veh.model && veh.year ? withDeadline(marketPrice(veh), 3500, null) : null,
     withDeadline(nbuRate('USD').catch(() => null), 2500, null),
+    // параметры авто по VIN из объявлений — платный метод, поэтому только в оплаченном отчёте
+    withProvider ? withDeadline(adsByVin(vin), 9500, null) : null,
   ]);
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
@@ -98,7 +101,7 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
   const usMarket = Boolean(decoded.trusted || ['US', 'CA', 'MX'].includes(region));
   return {
     vin, region, usMarket, paidData: withProvider, generatedAt: new Date().toISOString(), found, next,
-    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, market: market ? { ...market, uah: fx?.rate || null } : null, checks: searchCount(vin), mentions, insurance, ua, wanted, mismatch, risk, usa,
+    vehicle: veh, local, photo, decoded, recalls: rec, complaints: comp, ratings: rate, fuel, canada: ca, market: market ? { ...market, uah: fx?.rate || null } : null, adInfo: adInfo?.found ? adInfo.data : null, checks: searchCount(vin), mentions, insurance, ua, wanted, mismatch, risk, usa,
     coverage: { registry: coverage(), wantedUpdatedAt: wantedState.updatedAt, wantedCount: wantedState.count },
   };
 }

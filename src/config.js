@@ -31,6 +31,8 @@ export const cfg = {
   operatorName: process.env.OPERATOR_NAME || '',            // ФОП/ТОВ, ЄДРПОУ, адреса — для оферты
   operatorDetails: process.env.OPERATOR_DETAILS || '',
   riaKey: process.env.RIA_API_KEY || '',                        // рыночные цены в Украине (открытый API объявлений)
+  riaUserId: process.env.RIA_USER_ID || '',                    // нужен платным методам (параметры авто по VIN)
+  riaVinMonthlyLimit: Number(process.env.RIA_VIN_MONTHLY_LIMIT) || 8, // пробный пакет метода: 10 запросов, 2 оставляем про запас
   riaHourlyLimit: Number(process.env.RIA_HOURLY_LIMIT) || 24,    // условия бесплатного пакета: 30 запросов в час на ключ, при превышении ключ блокируется
   riaMonthlyLimit: Number(process.env.RIA_MONTHLY_LIMIT) || 850, // 1000 запросов в месяц; 150 оставляем на проверки владельца
   plausible: process.env.PLAUSIBLE_DOMAIN || '',

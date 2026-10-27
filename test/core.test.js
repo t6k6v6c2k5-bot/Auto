@@ -196,3 +196,13 @@ test('рыночная цена: подбор марки и модели, ста
   assert.ok(s.p25 < s.median && s.median < s.p75);
   assert.equal(stats([1000, 2000]), null);
 });
+
+
+test('данные из объявлений по VIN: разбор ответа и пустые ответы', async () => {
+  const { parseChips } = await import('../src/riavin.js');
+  const j = { chipsData: { chips: [{ entity: 'brandId', name: 'Toyota', value: 79 }, { entity: 'modelId', name: 'Camry', value: 698 }, { entity: 'year', name: '2012 - 2012 рр.', value: { gte: 2012, lte: 2012 } }, { entity: 'mileage', name: 'Пробіг від 188 до 188 тис.км', value: { gte: 188, lte: 188 } }, { entity: 'stateId', name: 'Вінницька', value: 1 }, { entity: 'engineVolume', name: 'x', value: { gte: 2.5, lte: 2.5 } }] } };
+  const p = parseChips(j);
+  assert.equal(p.brand, 'Toyota'); assert.equal(p.year, 2012); assert.equal(p.mileageK, 188); assert.equal(p.region, 'Вінницька'); assert.equal(p.engine, 2.5);
+  assert.equal(parseChips({}), null);
+  assert.equal(parseChips({ chipsData: { chips: [] } }), null);
+});

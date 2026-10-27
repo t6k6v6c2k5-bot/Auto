@@ -582,3 +582,4 @@ ul.scams{margin-left:auto;margin-right:auto}
 @supports not (background:color-mix(in srgb,red,blue)){.mk-bar i{background:var(--blue)}}
 
 .legal a{color:#b6c8e6;text-decoration:underline;text-underline-offset:3px}.legal a:hover{color:#fff}
+.adinfo .kv dd b{font-variant-numeric:tabular-nums}

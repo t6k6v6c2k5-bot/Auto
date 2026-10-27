@@ -71,7 +71,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=35">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=36">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -413,6 +413,16 @@ function mentionsBlock(lang, r) {
 }
 
 // «Паспорт авто»: все известное о машине из реестра, декодера и локальной расшифровки в одной сетке
+// данные из объявлений по VIN (оплаченный отчёт): регион, пробег, кузов, коробка; вывод по среднему годовому пробегу
+function adsBlock(lang, r) {
+  const a = r.adInfo; if (!a) return '';
+  const d = dict(lang); const uk = (v) => (v ? `<span lang="uk">${esc(v)}</span>` : '');
+  const age = a.year ? Math.max(1, new Date().getFullYear() - a.year + 0.5) : 0;
+  const perYear = a.mileageK && age ? a.mileageK / age : 0;
+  const verdict = perYear ? (perYear < 8 && age >= 3 ? ['warn', d.ad_low] : perYear > 25 ? ['warn', d.ad_high] : ['ok', d.ad_ok]) : null;
+  const cells = [[d.ad_region, uk(a.region)], [d.ad_mileage, a.mileageK ? `<b>${nfLocal(lang, a.mileageK)} ${esc(d.ad_km)}</b>` : ''], [d.ad_color, uk(a.color)], [d.ad_gear, uk(a.gearbox)], [d.ad_drive, uk(a.drive)], [d.ad_engine, a.engine ? esc(`${a.engine} ${lang === 'en' ? 'L' : 'л'}${a.fuel ? ' · ' + a.fuel : ''}`) : ''], [d.ad_mod, uk(a.modification)], [d.ad_gen, uk(a.generation)]].filter(([, v]) => v);
+  return `<section class="panel adinfo" aria-labelledby="h-ads"><h2 id="h-ads">${esc(d.ad_h)}</h2><dl class="kv">${cells.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>${verdict ? `<p class="tverdict ${verdict[0]}">${esc(fmt(d.ad_year_avg, { v: nfLocal(lang, Math.round(perYear)), t: verdict[1] }))}</p>` : ''}<p class="muted sm">${esc(d.ad_note)}</p></section>`;
+}
 // рыночная цена в Украине: медиана, типичный диапазон (25–75 процентили), число объявлений
 function marketBlock(lang, r) {
   const m = r.market; if (!m) return '';
@@ -542,7 +552,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${marketBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
