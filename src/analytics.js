@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS hits(ts INTEGER NOT NULL, day TEXT NOT NULL, hour INT
 CREATE INDEX IF NOT EXISTS hits_day ON hits(day, kind);
 CREATE INDEX IF NOT EXISTS hits_ts ON hits(ts);
 `);
+try { db.exec('ALTER TABLE hits ADD COLUMN agent TEXT'); } catch { /* колонка уже есть */ }
 const SALT = randomBytes(8).toString('hex');
 const TZ = 'Europe/Kyiv';
 const dayFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -19,11 +20,20 @@ export const fmtTs = (ts) => (ts ? stampFmt.format(ts) : '—');
 const hourOf = (ts) => Number(hourFmt.format(ts)) % 24;
 export const daysBack = (n) => Array.from({ length: n }, (_, i) => dayOf(Date.now() - (n - 1 - i) * 864e5));
 
-const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|^$/i;
-const devOf = (ua) => (BOT.test(ua) ? 'bot' : /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop');
+const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|bytespider|barkrowler|dataprovider|seokicks|ahrefs|semrush|mj12|dotbot|blexbot|serpstat|netestate|zoominfo|scrapy|httpclient|libwww|requests|http-client|nmap|masscan|nikto|sqlmap|zgrab|censys|shodan|expanse|phantom|selenium|puppeteer|playwright|check_http|^$/i;
+// настоящий браузер всегда шлёт Accept-Language; его отсутствие у «браузерного» UA — признак скрипта
+const isBot = (ua, h) => BOT.test(ua) || !h['accept-language'];
+const devOf = (ua, h = { 'accept-language': 'x' }) => (isBot(ua, h) ? 'bot' : /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop');
+// короткое имя клиента для диагностики: имя бота либо семейство браузера
+const agentOf = (ua) => {
+  if (!ua) return '(пусто)';
+  const b = /([A-Za-z0-9_.-]*(?:bot|crawl|spider|slurp|preview)[A-Za-z0-9_.-]*)/i.exec(ua) || /\b(curl|wget|python-requests|python|go-http-client|okhttp|axios|node-fetch|scrapy|headlesschrome|playwright|puppeteer|bytespider|barkrowler)\b/i.exec(ua);
+  if (b) return b[1].slice(0, 30);
+  return /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'другой';
+};
 const SKIP = /^\/(healthz|admin|webhook|api\/lotimg)|\.[a-z0-9]{2,5}$/i;
 
-const ins = db.prepare('INSERT INTO hits(ts,day,hour,kind,path,lang,ref,dev,vid,status,ms,note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
+const ins = db.prepare('INSERT INTO hits(ts,day,hour,kind,path,lang,ref,dev,vid,status,ms,note,agent) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)');
 
 // вызывается после отправки ответа; ошибки аналитики никогда не ломают сайт
 export function track(req, res, t0, ip, errMsg = '') {
@@ -39,7 +49,7 @@ export function track(req, res, t0, ip, errMsg = '') {
     const status = res.statusCode;
     if (status >= 300 && status < 400 && !(rest === '/check' && req.evNote === 'invalid')) return;
     const ua = String(req.headers['user-agent'] || '');
-    const dev = devOf(ua);
+    const dev = devOf(ua, req.headers);
     const ts = Date.now(), day = dayOf(ts);
     let ref = '';
     const rh = String(req.headers.referer || '');
@@ -47,7 +57,7 @@ export function track(req, res, t0, ip, errMsg = '') {
     const utm = u.searchParams.get('utm_source'); if (utm) ref = ('utm:' + utm).slice(0, 40);
     const vid = createHash('sha256').update(`${ip}|${ua}|${day}|${SALT}`).digest('hex').slice(0, 12);
     const kind = dev === 'bot' ? 'bot' : status >= 500 ? 'error' : isApi ? 'api' : rest === '/check' ? 'check' : 'page';
-    ins.run(ts, day, hourOf(ts), kind, rest.slice(0, 80), m ? m[1] : '', ref, dev, vid, status, Date.now() - t0, kind === 'error' ? errMsg.slice(0, 160) : (req.evNote || ''));
+    ins.run(ts, day, hourOf(ts), kind, rest.slice(0, 80), m ? m[1] : '', ref, dev, vid, status, Date.now() - t0, kind === 'error' ? errMsg.slice(0, 160) : (req.evNote || ''), agentOf(ua));
   } catch { /* статистика не критична */ }
 }
 
@@ -60,8 +70,8 @@ const one = (sql, ...a) => db.prepare(sql).get(...a);
 export function daily(n) {
   const days = daysBack(n);
   const rows = all(`SELECT day,
-      COUNT(DISTINCT CASE WHEN kind IN ('page','check') THEN vid END) visitors, COUNT(DISTINCT CASE WHEN kind='check' THEN vid END) checkers,
-      SUM(kind IN ('page','check')) views, SUM(kind='check') checks, SUM(kind='bot') bots, SUM(kind='error') errors
+      COUNT(DISTINCT CASE WHEN kind IN ('page','check') AND status<400 THEN vid END) visitors, COUNT(DISTINCT CASE WHEN kind='check' THEN vid END) checkers,
+      SUM(kind IN ('page','check') AND status<400) views, SUM(kind='check') checks, SUM(kind='bot') bots, SUM(kind='error') errors
     FROM hits WHERE day>=? GROUP BY day`, days[0]);
   const by = new Map(rows.map((r) => [r.day, r]));
   return days.map((d) => { const r = by.get(d) || {}; return { day: d, visitors: r.visitors || 0, views: r.views || 0, checks: r.checks || 0, checkers: r.checkers || 0, bots: r.bots || 0, errors: r.errors || 0 }; });
@@ -80,6 +90,8 @@ export function breakdown(n) {
     hours: all(`SELECT hour, COUNT(*) c FROM hits WHERE day>=? AND ${human} GROUP BY hour`, from),
     errors: all("SELECT ts, path, status, note FROM hits WHERE day>=? AND kind='error' ORDER BY ts DESC LIMIT 15", from),
     slow: slowPages(from),
+    agents: all("SELECT COALESCE(agent,'—') agent, dev, COUNT(*) c FROM hits WHERE day>=? AND kind<>'error' GROUP BY agent, dev ORDER BY c DESC LIMIT 14", from),
+    heavy: all("SELECT substr(vid,1,6) id, day, COUNT(*) c, MIN(dev) dev, COALESCE(MIN(agent),'—') agent FROM hits WHERE day>=? AND kind IN ('page','check') GROUP BY vid, day ORDER BY c DESC LIMIT 6", from),
   };
 }
 
