@@ -74,7 +74,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=42">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=43">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -616,6 +616,21 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, ogUrl: abs(req, `/${lang}/check?q=${encodeURIComponent(r.vin)}`), preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 
+// карточка авто в отчёте по номеру: характеристики одной строкой, ключевые факты и вертикальная лента операций
+function plateCar(lang, g, i, titled) {
+  const d = dict(lang); const gv = g.summary.vehicle, sm = g.summary;
+  const title = `${brandModel(gv.brand, gv.model)}${gv.year ? ', ' + gv.year : ''}`;
+  const chips = [gv.color && rv(lang, gv.color), gv.fuel && rv(lang, gv.fuel), gv.body && rv(lang, gv.body), gv.cap ? `${gv.cap} ${d.cm3}` : ''].filter(Boolean);
+  const single = g.rows.length < 2;
+  const facts = [[d.ua_first, esc(sm.first)], !single && [d.ua_last, esc(sm.last)], !single && [d.ua_records, sm.records], sm.owners > 1 && [d.ua_owners, sm.owners], sm.imported && [d.ua_imported, esc(sm.imported.date)], sm.deregistered && [d.ua_dereg, esc(sm.deregistered.date)]].filter(Boolean);
+  const isKey = (x) => ['import', 'first', 'owner', 'export', 'scrap', 'dereg'].includes(x.opkind);
+  const sorted = [...g.rows].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const keyRows = sorted.filter(isKey), rest = keyRows.length ? sorted.filter((x) => !isKey(x)) : [];
+  const li = (x) => `<li class="k-${x.opkind}"><time>${esc(x.date)}</time><div><b>${esc(d['k_' + x.opkind] || x.opkind)}</b><span>${esc(x.opname || x.oper)}</span>${x.dep ? `<small lang="uk">${esc((x.dep || '').replace(/^\d+ - /, ''))}</small>` : ''}</div></li>`;
+  const list = (rows) => `<ol class="pr-tl">${rows.map(li).join('')}</ol>`;
+  return `<section class="panel pr-car" aria-labelledby="h-g${i}"><h2 id="h-g${i}"${titled ? '' : ' class="sr-only"'}>${esc(title)}</h2>${chips.length ? `<p class="pr-chips">${chips.map((c) => `<span>${esc(c)}</span>`).join('')}</p>` : ''}<dl class="pr-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join('')}${sm.plates.length ? `<div><dt>${esc(d.ua_plates)}</dt><dd>${sm.plates.slice(-2).map((x) => plateEl(x, true)).join(' ')}</dd></div>` : ''}</dl>${list(keyRows.length ? keyRows : sorted)}${rest.length ? `<details class="pr-more"><summary>${esc(fmt(d.tl_others, { n: rest.length }))}</summary>${list(rest)}</details>` : ''}</section>`;
+}
+
 export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null, market = null) {
   const d = dict(lang);
   const g0 = hist.groups[0];
@@ -625,19 +640,14 @@ export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null, 
   const hit = wanted.length > 0;
   const tile = ([cls, icon, txt], label) => `<li class="tile ${cls}"><span class="ic">${icon}</span><div><small>${esc(label)}</small><b>${esc(txt)}</b></div></li>`;
   const tilesHtml = `<div class="wrap"><ul class="tiles three" role="list">${tile(hit ? ['bad', tileIc.bad, d.t_wanted_hit] : ['ok', tileIc.ok, d.t_wanted_ok], d.wanted_h)}${tile(['ok', tileIc.doc, plural(lang, hist.rows.length, d.t_reg_n)], fmt(d.t_plate_reg, { from: yr(pcov.from), to: yr(pcov.to) }))}${tile(['na', tileIc.na, d.t_vin_none], d.t_vin)}</ul></div>`;
+  // розыск: подробности только при совпадении, «нет совпадений» уже сказано в плашке выше
   const wantedHtml = hit
     ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(q.unit)}</dd></dl>`).join('')}</section>`
-    : `<section class="panel"><h2>${esc(d.wanted_h)}</h2><p class="good">${ic.check}<span>${esc(d.wanted_none)}</span></p></section>`;
-  const groupsHtml = hist.groups.map((g, i) => {
-    const gv = g.summary.vehicle;
-    const title = `${brandModel(gv.brand, gv.model)}${gv.year ? ', ' + gv.year : ''}`;
-    const line = [gv.color && rv(lang, gv.color), gv.fuel && rv(lang, gv.fuel), gv.body && rv(lang, gv.body), gv.cap ? `${gv.cap} ${d.cm3}` : ''].filter(Boolean).join(' · ');
-    return `<section class="panel" aria-labelledby="h-g${i}"><h2 id="h-g${i}">${esc(title)}</h2>${line ? `<p class="vehline">${esc(line)}</p>` : ''}${uaSummary(lang, g)}${timeline(lang, g.rows, title)}</section>`;
-  }).join('');
-  const next = hit ? d.c_wanted : [d.plate_vin_hint, ...d.c_default];
-  const main = `${wantedHtml}<section class="panel" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ul class="check tight">${next.map((x) => `<li>${ic.check}<span>${tel(x)}</span></li>`).join('')}</ul></section>
-<div class="notice info">${esc(fmt(d.plate_note, { from: pcov.from || '—', to: pcov.to || '—' }))}${hist.groups.length > 1 ? ` <b>${esc(plural(lang, hist.groups.length, d.plate_groups))}.</b>` : ''}</div>${groupsHtml}
-${market ? marketBlock(lang, { market, vehicle: { make: v?.brand, model: v?.model } }) : ''}<p class="muted sm">${esc(d.sources_note)}</p>`;
+    : '';
+  const groupsHtml = hist.groups.map((g, i) => plateCar(lang, g, i, hist.groups.length > 1)).join('');
+  const next = hit ? d.c_wanted : [d.plate_vin_hint, ...d.c_default.slice(0, 2)];
+  const main = `${wantedHtml}${groupsHtml}${market ? marketBlock(lang, { market, vehicle: { make: v?.brand, model: v?.model } }) : ''}<section class="panel pr-next" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ol>${next.map((x) => `<li>${tel(x)}</li>`).join('')}</ol></section>
+<p class="pr-note">${esc(fmt(d.plate_note, { from: pcov.from || '—', to: pcov.to || '—' }))}${hist.groups.length > 1 ? ` <b>${esc(plural(lang, hist.groups.length, d.plate_groups))}.</b>` : ''} ${esc(d.sources_note)}</p>`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
 <div class="vehicle${photo ? '' : ' solo'}">${photo ? figureHtml(lang, photo, sub) : ''}<div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
 <section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: plate, postKind: 'plate', keys: [plate] })}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
