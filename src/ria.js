@@ -97,5 +97,19 @@ export async function listingsByVin(vin) {
   } catch (e) { console.error('listing by vin', e.message); return null; }
 }
 
+// «Вставте посилання на оголошення»: id из ссылки AUTO.RIA -> VIN (если продавец его указал), цена и параметры. 1 запрос, кэш на 3 дня.
+export const adIdFromUrl = (raw) => { const m = /^\s*(?:https?:\/\/)?(?:www\.)?auto\.ria\.com\/(?:[^\s?#]*?_)?(\d{6,10})(?:\.html)?(?:[?#]\S*)?\s*$/i.exec(String(raw || '').slice(0, 300)); return m ? m[1] : ''; };
+export async function adById(id) {
+  if (!cfg.riaKey || !/^\d{6,10}$/.test(id)) return null;
+  try {
+    return await cached('ad:' + id, LISTING_TTL, async () => {
+      const j = await call('/info', { auto_id: id }); if (!j || j.error) throw new Error('ria bad info response');
+      const vin = String(j.VIN || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const km = parseInt(String(j.autoData?.race || '').replace(/\D/g, ''), 10);
+      return { vin: /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : '', price: Number(j.USD) || null, mileageK: km || null, year: Number(j.autoData?.year) || null, make: j.markName || '', model: j.modelName || '', region: j.stateData?.name || '', added: String(j.addDate || '').slice(0, 10) };
+    });
+  } catch (e) { console.error('ad by id', e.message); return null; }
+}
+
 // прогрев при старте: список марок в кэш, чтобы первый отчёт не ждал лишних запросов
 export const warmRia = () => { if (!cfg.riaKey) return; store.dropRiaMisses(); cached('marks', LIST_TTL, () => call('/categories/1/marks')).catch(() => {}); };

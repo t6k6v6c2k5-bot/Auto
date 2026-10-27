@@ -6,6 +6,7 @@ import { l100, gpkm } from './fueleco.js';
 import { toolsHomeBlock, diffBlock, toolCards } from './tools-views.js';
 import { guidesHomeBlock } from './guides-views.js';
 import { commentsSection } from './comments.js';
+import { watchBox } from './watch.js';
 import { normalizePlate } from './plate.js';
 import { TT } from './tools-i18n.js';
 import { providerEnabled } from './providers.js';
@@ -93,17 +94,17 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 ${sticky}
 <button class="totop" id="totop" type="button" hidden aria-label="${esc(t(lang, 'to_top'))}" title="${esc(t(lang, 'to_top'))}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
-<script src="/app.js?v=7" defer data-lang="${lang}"></script></body></html>`;
+<script src="/app.js?v=8" defer data-lang="${lang}"></script></body></html>`;
 }
 
 // ---------- поиск ----------
 export function searchForm(lang, value = '', big = true, id = 'a', errKind = '') {
-  const errText = errKind ? ({ checksum: t(lang, 'vin_sum'), chars: t(lang, 'vin_chars') }[errKind] || t(lang, 'vin_len')) : '';
-  const msg = JSON.stringify({ bad: t(lang, 'vin_len'), chars: t(lang, 'vin_chars'), checksum: t(lang, 'vin_sum'), ok: t(lang, 'vin_ok'), plate: t(lang, 'plate_ok') });
+  const errText = errKind ? ({ checksum: t(lang, 'vin_sum'), chars: t(lang, 'vin_chars'), adnovin: t(lang, 'ad_no_vin'), adfail: t(lang, 'ad_fail') }[errKind] || t(lang, 'vin_len')) : '';
+  const msg = JSON.stringify({ bad: t(lang, 'vin_len'), chars: t(lang, 'vin_chars'), checksum: t(lang, 'vin_sum'), ok: t(lang, 'vin_ok'), plate: t(lang, 'plate_ok'), ad: t(lang, 'ad_link_ok') });
   return `<form class="vinform ${big ? 'big' : ''}" action="/${lang}/check" method="get" novalidate role="search">
 <label class="sr-only" for="q-${id}">${esc(t(lang, 'q_ph'))}</label>
 <div class="searchbox${errKind ? ' invalid' : ''}"><div class="field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ${A}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-<input name="q" id="q-${id}" value="${esc(value)}" placeholder="${esc(t(lang, 'q_ph'))}" maxlength="23" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-describedby="hint-${id}"${errKind ? ' aria-invalid="true"' : ''} data-msg='${esc(msg)}'>
+<input name="q" id="q-${id}" value="${esc(value)}" placeholder="${esc(t(lang, 'q_ph'))}" maxlength="300" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-describedby="hint-${id}"${errKind ? ' aria-invalid="true"' : ''} data-msg='${esc(msg)}'>
 <span class="cnt" aria-hidden="true">0/17</span></div><button class="btn primary" type="submit">${esc(t(lang, 'btn_check'))}</button></div>
 <div class="modes" aria-hidden="true"><span data-mode="vin">${esc(t(lang, 'mode_vin'))}</span><span data-mode="plate">${esc(t(lang, 'mode_plate'))}</span></div>
 <p class="hint${errKind ? ' err' : ''}" id="hint-${id}" role="status" aria-live="polite">${esc(errText)}</p>
@@ -425,6 +426,42 @@ function adsBlock(lang, r) {
   const cells = [[d.ad_region, uk(a.region)], [d.ad_mileage, a.mileageK ? `<b>${nfLocal(lang, a.mileageK)} ${esc(d.ad_km)}</b>` : ''], [d.ad_color, uk(a.color)], [d.ad_gear, uk(a.gearbox)], [d.ad_drive, uk(a.drive)], [d.ad_engine, a.engine ? esc(`${a.engine} ${lang === 'en' ? 'L' : 'л'}${a.fuel ? ' · ' + a.fuel : ''}`) : ''], [d.ad_mod, uk(a.modification)], [d.ad_gen, uk(a.generation)]].filter(([, v]) => v);
   return `<section class="panel adinfo" aria-labelledby="h-ads"><h2 id="h-ads">${esc(d.ad_h)}</h2><dl class="kv">${cells.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>${verdict ? `<p class="tverdict ${verdict[0]}">${esc(fmt(d.ad_year_avg, { v: nfLocal(lang, Math.round(perYear)), t: verdict[1] }))}</p>` : ''}<p class="muted sm">${esc(d.ad_note)}</p></section>`;
 }
+// «Що перевірено»: честна карта покриття — що знайшли, чого не знайшли і що не вдалося перевірити (без назв джерел)
+function coverageBlock(lang, r) {
+  const d = dict(lang);
+  const st = (ok, text) => `<li>${ok === true ? ic.check : ic.warn}<span>${esc(text)}</span></li>`;
+  const items = [
+    st(r.ua.rows.length ? true : null, r.ua.rows.length ? fmt(d.cv_reg_yes, { n: r.ua.rows.length }) : d.cv_reg_no),
+    st(true, r.wanted.length ? d.cv_wanted_yes : d.cv_wanted_no),
+    st(r.recalls?.unavailable ? null : true, r.recalls?.unavailable ? d.cv_rec_na : r.recalls?.items?.length ? fmt(d.cv_rec_yes, { n: r.recalls.items.length }) : d.cv_rec_no),
+    st(r.listing ? true : null, !r.listing ? d.cv_ls_na : r.listing.n ? d.cv_ls_yes : d.cv_ls_no),
+    st(r.market ? true : null, r.market ? d.cv_mk_yes : d.cv_mk_no),
+    st(r.usa?.found ? true : null, r.usa?.found ? d.cv_us_yes : r.paidData ? d.cv_us_no : d.cv_us_paid),
+  ];
+  return `<section class="panel" aria-labelledby="h-cv"><h2 id="h-cv">${esc(d.cv_h)}</h2><ul class="check tight">${items.join('')}</ul><p class="muted sm">${esc(d.cv_note)}</p></section>`;
+}
+// призыв оставить отзыв: комментарии живут только если их пишут
+function reviewCta(lang) {
+  const d = dict(lang);
+  return `<div class="panel"><h2>${esc(d.rv_h)}</h2><p class="muted">${esc(d.rv_p)}</p><a class="btn ghost" href="#comments">${esc(d.rv_btn)}</a></div>`;
+}
+// проверка по ссылке на объявление: цена из объявления против рынка и пробег за год (данные пользователь и так видит в своём объявлении)
+function adCompareBlock(lang, r) {
+  const a = r.adLink; if (!a) return '';
+  const d = dict(lang); const m = r.market;
+  const rows = [];
+  if (a.price) rows.push([d.ac_price, `<b>$${nfLocal(lang, a.price)}</b>`]);
+  let verdict = null;
+  if (a.price && m?.median) {
+    const diff = Math.round(((a.price - m.median) / m.median) * 100);
+    rows.push([d.ac_market, `$${nfLocal(lang, m.median)} (${nfLocal(lang, m.p25)}–${nfLocal(lang, m.p75)})`]);
+    verdict = a.price < m.p25 * 0.85 ? ['warn', fmt(d.ac_cheap, { v: Math.abs(diff) })] : a.price > m.p75 * 1.1 ? ['warn', fmt(d.ac_pricey, { v: Math.abs(diff) })] : ['ok', d.ac_fair];
+  }
+  const age = a.year ? Math.max(1, new Date().getFullYear() - a.year + 0.5) : 0;
+  if (a.mileageK) { rows.push([d.ls_mileage, `<b>${nfLocal(lang, a.mileageK)} ${esc(d.ad_km)}</b>`]); if (age) { const py = a.mileageK / age; if (py < 6 && age >= 3) verdict = verdict || ['warn', d.ac_lowkm]; } }
+  if (!rows.length) return '';
+  return `<section class="panel adinfo" aria-labelledby="h-ac"><h2 id="h-ac">${esc(d.ac_h)}</h2><dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>${verdict ? `<p class="tverdict ${verdict[0]}">${esc(verdict[1])}</p>` : ''}<p class="muted sm">${esc(d.ac_note)}</p></section>`;
+}
 // «Чи продається зараз»: факт и дата объявления с этим VIN — бесплатно; цена, пробег, регион и ссылка — в оплаченном отчёте
 function listingBlock(lang, r) {
   const l = r.listing; if (!l) return '';
@@ -567,7 +604,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${listingBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${adsBlock(lang, r)}${adCompareBlock(lang, r)}${listingBlock(lang, r)}${marketBlock(lang, r)}${coverageBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
     : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${marketBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
@@ -575,7 +612,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
     : `<div class="panel paywall"><h2>${paywallOn() ? ic.lock : ''}${esc(d.paid_h)}</h2><ul class="mini"><li>${ic.check}<span>${esc(d.ua_locked)}</span></li><li>${ic.check}<span>${esc(d.go_pdf)}</span></li></ul><a class="btn primary wide" href="${href}">${cta}</a></div>${waitlistBox(lang)}`;
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const secnav = full ? `<nav class="secnav noprint" aria-label="${esc(d.toc_h)}"><div class="wrap">${secs.map(([id, tt]) => `<a href="#${id}">${esc(tt.split(' ').slice(0, 2).join(' '))}</a>`).join('')}</div></nav>` : '';
-  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: fromPlate || r.vin, postKind: fromPlate ? 'plate' : 'vin', keys: [r.vin, ...(r.ua?.summary?.plates || []).map(normalizePlate).slice(-3)] })}</div><aside>${aside}</aside></div></section>`;
+  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${watchBox(lang, r.vin, new URL(req.url || '/', 'http://x').searchParams.get('w') || '')}${reviewCta(lang)}${commentsSection(req, lang, { postKey: fromPlate || r.vin, postKind: fromPlate ? 'plate' : 'vin', keys: [r.vin, ...(r.ua?.summary?.plates || []).map(normalizePlate).slice(-3)] })}</div><aside>${aside}</aside></div></section>`;
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, ogUrl: abs(req, `/${lang}/check?q=${encodeURIComponent(r.vin)}`), preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 

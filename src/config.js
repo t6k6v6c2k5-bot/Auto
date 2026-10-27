@@ -30,6 +30,8 @@ export const cfg = {
   supportEmail: process.env.SUPPORT_EMAIL || '',            // не показываем вымышленный адрес: задайте реальный
   operatorName: process.env.OPERATOR_NAME || '',            // ФОП/ТОВ, ЄДРПОУ, адреса — для оферты
   operatorDetails: process.env.OPERATOR_DETAILS || '',
+  mailKey: process.env.RESEND_API_KEY || '',                    // отправка писем (подтверждение и оповещения о слежении); без ключа слежение выключено
+  mailFrom: process.env.MAIL_FROM || '',                        // например: VINScope <alerts@vinscope.com.ua> (домен подтверждается в Resend)
   riaKey: process.env.RIA_API_KEY || '',                        // рыночные цены в Украине (открытый API объявлений)
   riaUserId: process.env.RIA_USER_ID || '',                    // нужен платным методам (параметры авто по VIN)
   riaVinMonthlyLimit: Number(process.env.RIA_VIN_MONTHLY_LIMIT) || 8, // пробный пакет метода: 10 запросов, 2 оставляем про запас

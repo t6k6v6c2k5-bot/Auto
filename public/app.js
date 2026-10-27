@@ -46,8 +46,10 @@
     const modes = $$('.modes span', form), msg = JSON.parse(input.dataset.msg);
     const setMode = (m) => modes.forEach((el) => el.classList.toggle('on', el.dataset.mode === m));
     const show = (text, kind) => { hint.textContent = text; hint.className = 'hint' + (kind ? ' ' + kind : ''); const bad = kind === 'err'; box.classList.toggle('invalid', bad); input.setAttribute('aria-invalid', bad ? 'true' : 'false'); };
+    const isAd = (x) => /^\s*(https?:\/\/)?(www\.)?auto\.ria\.com\/\S+/i.test(x);
     const update = (final) => {
       const raw = input.value; const v = latin(raw);
+      if (isAd(raw)) { cnt.textContent = 'URL'; setMode(null); show('✓ ' + msg.ad, 'ok'); return true; }
       cnt.textContent = alnum(raw).length + '/17';
       if (!v) { show('', ''); setMode(null); return false; }
       if (v.length < 17 && isPlate(v)) { setMode('plate'); show('✓ ' + msg.plate, 'ok'); return true; }
@@ -60,6 +62,7 @@
     input.addEventListener('input', () => update(false));
     form.addEventListener('submit', (ev) => {
       if (!update(true)) { ev.preventDefault(); input.focus(); return; }
+      if (isAd(input.value)) { input.value = input.value.trim(); setBusy(true); return; }
       const v = latin(input.value); input.value = v;
       safe(() => { const r = getRecent().filter((x) => x !== v); r.unshift(v); localStorage.setItem(recentKey, JSON.stringify(r.slice(0, 4))); });
       track('search', { type: isPlate(v) && v.length < 17 ? 'plate' : 'vin' });

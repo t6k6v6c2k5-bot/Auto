@@ -3,8 +3,9 @@ import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
 import { guidesHub, guidePage } from './src/guides-views.js';
-import { warmRia } from './src/ria.js';
+import { warmRia, adIdFromUrl, adById } from './src/ria.js';
 import * as cm from './src/comments.js';
+import * as wt from './src/watch.js';
 import { GUIDES, GG } from './src/guides.js';
 import { nbuRate } from './src/nbu.js';
 import { getPhoto } from './src/photo.js';
@@ -195,6 +196,13 @@ async function page(req, res, url, lang, rest) {
     const raw = url.searchParams.get('q') || url.searchParams.get('vin') || '';
     if (!raw) return redirect(res, `/${lang}/`, 301);
     if (limited('chk:' + ipOf(req), 60)) { req.evNote = 'limited'; return priv(V.messagePage(req, lang, L(lang, 'err_rate_h'), L(lang, 'err_rate')), 429); }
+    const adId = adIdFromUrl(raw);
+    if (adId) { // ссылка на объявление: достаём VIN из карточки (если продавец его указал) и ведём на обычную проверку
+      req.evNote = 'ad';
+      const a = isBotReq(req) ? null : await adById(adId);
+      if (a?.vin) return redirect(res, `/${lang}/check?q=${a.vin}&ad=${adId}`);
+      return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 200))}&e=${a ? 'adnovin' : 'adfail'}`);
+    }
     const v = validateVin(raw);
     if (v.ok) {
       req.evNote = 'vin';
@@ -211,7 +219,9 @@ async function page(req, res, url, lang, rest) {
         if (veh.brand) early = groups.filter((g) => b4(g.summary.vehicle.brand) === b4(veh.brand) && (!veh.year || !g.summary.vehicle.year || veh.year === g.summary.vehicle.year));
         else { early = groups; unverified = true; }
       }
-      return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early, unverified }));
+      const adId2 = /^\d{6,10}$/.test(url.searchParams.get('ad') || '') ? url.searchParams.get('ad') : '';
+      const adLink = adId2 && !isBotReq(req) ? await adById(adId2) : null; // пришли по ссылке: цену из их объявления показываем сразу
+      return priv(V.checkPage(req, lang, adLink?.vin === v.vin ? { ...r, adLink } : r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early, unverified }));
     }
     const plate = normalizePlate(raw);
     if (!looksLikePlate(plate) && !looksLikeNlPlate(plate)) { req.evNote = 'invalid'; return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`); }
@@ -327,6 +337,22 @@ async function commentPost(req, res) {
   const age = Date.now() - Number(f.get('t')); if (!(age >= 3000 && age < 6 * 3600e3)) return back('fast');
   return back(cm.addComment({ key, kind: f.get('kind'), cat: f.get('cat'), text: f.get('text'), lang, ip: ipOf(req) }));
 }
+async function watchPost(req, res) {
+  const f = await readForm(req, res); if (!f) return;
+  const lang = LANGS.includes(f.get('lang')) ? f.get('lang') : 'uk';
+  const vin = String(f.get('vin') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const back = (code) => redirect(res, `/${lang}/check?q=${encodeURIComponent(KEY_RE.test(vin) ? vin : '')}&w=${code}#watch`, 303);
+  if (limited('wt:' + ipOf(req), 3)) return back('fast');
+  if (f.get('website')) return back('sent'); // приманка заполнена
+  const age = Date.now() - Number(f.get('t')); if (!(age >= 2500 && age < 6 * 3600e3)) return back('fast');
+  return back(await wt.addWatch({ email: f.get('email'), vin, lang, base: origin(req) }));
+}
+function watchLink(req, res, url, confirm) {
+  const w = (confirm ? wt.confirmWatch : wt.stopWatch)(url.searchParams.get('t') || '');
+  const lang = w?.lang && LANGS.includes(w.lang) ? w.lang : 'uk';
+  const k = !w ? 'bad' : confirm ? 'ok' : 'stop';
+  return send(req, res, w ? 200 : 404, V.messagePage(req, lang, wt.watchText(lang, k + '_h'), wt.watchText(lang, k + '_p')), 'text/html; charset=utf-8', { 'cache-control': 'no-store', ...NOINDEX });
+}
 async function commentReport(req, res) {
   const f = await readForm(req, res); if (!f) return;
   const lang = LANGS.includes(f.get('lang')) ? f.get('lang') : 'uk';
@@ -379,6 +405,8 @@ const server = createServer(async (req, res) => {
     if (pathname === '/admin/waitlist.csv') return adminWaitlist(req, res);
     if (pathname === '/admin/reset' && req.method === 'POST') return adminReset(req, res);
     if (pathname === '/admin/comment' && req.method === 'POST') return adminComment(req, res);
+    if (pathname === '/watch' && req.method === 'POST') return watchPost(req, res);
+    if (pathname === '/watch/confirm' || pathname === '/watch/stop') return watchLink(req, res, url, pathname === '/watch/confirm');
     if (pathname === '/comment' && req.method === 'POST') return commentPost(req, res);
     if (pathname === '/comment/report' && req.method === 'POST') return commentReport(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
@@ -448,5 +476,6 @@ server.listen(cfg.port, '0.0.0.0', () => {
   console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);
   startWanted(); startRegistry();
   warmRia();
-  const purge = () => { store.purgeOld(); purgeHits(); cm.purgeComments(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
+  const purge = () => { store.purgeOld(); purgeHits(); cm.purgeComments(); wt.purgeWatches(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
+  setTimeout(() => { wt.runWatches(cfg.baseUrl).catch((e) => console.error('watches', e.message)); setInterval(() => wt.runWatches(cfg.baseUrl).catch((e) => console.error('watches', e.message)), 24 * 3600e3).unref(); }, 10 * 60e3).unref(); // раз в сутки, первый обход через 10 минут после старта
 });
