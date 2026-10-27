@@ -24,7 +24,7 @@ import { ipOf, limited, origin, send, json, redirect, readBody, serveStatic } fr
 import * as store from './src/db.js';
 import * as stripe from './src/stripe.js';
 import * as V from './src/views.js';
-import { track, purgeHits, waitlistAll, fmtTs, isBotReq } from './src/analytics.js';
+import { track, purgeHits, waitlistAll, fmtTs, isBotReq, resetStats } from './src/analytics.js';
 import { adminPage } from './src/admin-views.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -305,6 +305,17 @@ function admin(req, res, url) {
   const ctx = { stats: store.stats(), wanted: wantedState, cov: coverage(), regStatus, paywall: paywallOn(), provider: payProvider() };
   send(req, res, 200, adminPage(url.searchParams.get('tab') || 'overview', Number(url.searchParams.get('d')) || 0, ctx), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
 }
+// сброс счётчиков: только POST с того же origin (браузер сам подставляет Basic-доступ, поэтому защищаем от CSRF)
+async function adminReset(req, res) {
+  if (!adminAuth(req, res)) return;
+  let same = false; try { same = new URL(String(req.headers.origin || '')).host === req.headers.host; } catch { /* нет origin */ }
+  if (!same) return send(req, res, 403, 'Forbidden', 'text/plain');
+  const f = new URLSearchParams(await readBody(req, 4096));
+  if (f.get('confirm') !== 'yes' || !['searches', 'hits'].includes(f.get('what'))) return send(req, res, 400, 'Bad request', 'text/plain');
+  resetStats(f.get('what'));
+  res.writeHead(303, { location: '/admin?tab=' + (f.get('what') === 'searches' ? 'checks' : 'traffic'), 'cache-control': 'no-store' });
+  res.end();
+}
 // выгрузка листа ожидания (CSV; значения, начинающиеся с = + - @, экранируются от формул Excel)
 function adminWaitlist(req, res) {
   if (!adminAuth(req, res)) return;
@@ -330,6 +341,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res, url);
     if (pathname === '/admin/waitlist.csv') return adminWaitlist(req, res);
+    if (pathname === '/admin/reset' && req.method === 'POST') return adminReset(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
     if (pathname === '/webhook/lemon' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);

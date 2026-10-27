@@ -121,3 +121,6 @@ export function dbInfo() {
   const t = (name) => one(`SELECT COUNT(*) c FROM ${name}`).c;
   return { hits: t('hits'), searches: t('searches'), orders: t('orders'), waitlist: t('waitlist'), photos: one('SELECT SUM(url IS NOT NULL) f, SUM(url IS NULL) m FROM photos'), usa: t('usa_cache'), usaMonth: one('SELECT COUNT(*) c FROM usa_cache WHERE ts>?', Date.now() - 30 * 864e5).c, mentions: t('mentions') };
 }
+
+// ручной сброс статистики из админки
+export const resetStats = (what) => (what === 'hits' ? db.prepare('DELETE FROM hits').run().changes : what === 'searches' ? db.prepare('DELETE FROM searches').run().changes : 0);
