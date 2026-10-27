@@ -3,6 +3,7 @@ import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
 import { guidesHub, guidePage } from './src/guides-views.js';
+import { warmRia } from './src/ria.js';
 import { GUIDES, GG } from './src/guides.js';
 import { nbuRate } from './src/nbu.js';
 import { getPhoto } from './src/photo.js';
@@ -408,5 +409,6 @@ server.headersTimeout = 15e3; server.requestTimeout = 30e3; server.keepAliveTime
 server.listen(cfg.port, '0.0.0.0', () => {
   console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);
   startWanted(); startRegistry();
+  warmRia();
   const purge = () => { store.purgeOld(); purgeHits(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
 });

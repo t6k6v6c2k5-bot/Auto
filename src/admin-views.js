@@ -145,6 +145,7 @@ function system(ctx) {
     ['BASE_URL', flag(cfg.baseUrl, esc(cfg.baseUrl)), 'Адрес сайта для ссылок и sitemap'],
     ['ADMIN_KEY', flag(cfg.adminKey.length >= 16, 'надёжный', 'короткий', 'bad'), 'Пароль админки (≥16 символов)'],
     ['APIBARA_API_KEY', flag(cfg.apibaraKey), 'Аукционы США (платные запросы только в оплаченном отчёте)'],
+    ['RIA_API_KEY', flag(cfg.riaKey), 'Рыночная цена в Украине (объявления)'],
     ['MARKETCHECK_API_KEY', flag(cfg.marketcheckKey), 'Рыночные цены США'],
     ['SEARCH_API_KEY', flag(cfg.searchKey), 'Поиск упоминаний авто'],
     ['MTSBU_TOKEN / INSURANCE_API_KEY', flag(cfg.mtsbuToken || cfg.insuranceKey), 'Проверка страховки'],

@@ -71,7 +71,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=33">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=34">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -413,6 +413,20 @@ function mentionsBlock(lang, r) {
 }
 
 // «Паспорт авто»: все известное о машине из реестра, декодера и локальной расшифровки в одной сетке
+// рыночная цена в Украине: медиана, типичный диапазон (25–75 процентили), число объявлений
+function marketBlock(lang, r) {
+  const m = r.market; if (!m) return '';
+  const d = dict(lang); const usd = (n) => `$${nfLocal(lang, Math.round(n / 50) * 50)}`;
+  const span = Math.max(1, m.p75 - m.p25), lo = Math.max(0, m.p25 - span), hi = m.p75 + span;
+  const pos = (v) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+  const car = [r.vehicle?.make, r.vehicle?.model].filter(Boolean).map((x) => nice(String(x))).join(' ');
+  const uah = m.uah ? `<span>${esc(fmt(d.mk_uah, { v: nfLocal(lang, Math.round((m.median * m.uah) / 1000) * 1000) }))}</span>` : '';
+  return `<section class="panel market" aria-labelledby="h-market"><h2 id="h-market">${esc(d.mk_h)}</h2>
+<div class="mk-main"><b>${usd(m.median)}</b><div><span>${esc(d.mk_med)}</span>${uah}</div></div>
+<div class="mk-bar" role="img" aria-label="${esc(d.mk_range)}: ${usd(m.p25)} – ${usd(m.p75)}"><i style="left:${pos(m.p25).toFixed(1)}%;width:${(pos(m.p75) - pos(m.p25)).toFixed(1)}%"></i><em style="left:${pos(m.median).toFixed(1)}%"></em></div>
+<div class="mk-axis"><span>${esc(d.mk_range)}</span><b>${usd(m.p25)} – ${usd(m.p75)}</b></div>
+<p class="muted sm">${esc(fmt(d.mk_basis, { n: nfLocal(lang, m.total), car, years: m.years }))}. ${esc(d.mk_note)}</p></section>`;
+}
 function passportBlock(lang, r) {
   const d = dict(lang); const x = r.decoded, us = r.ua.summary, v = us?.vehicle || {}, l = r.local;
   const cells = [];
@@ -528,8 +542,8 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   const secs = [['g-pass', d.g_pass], ['g-legal', d.g_legal], ...(usa ? [['g-usa', d.g_usa]] : []), ...(r.mentions ? [['g-web', d.g_web]] : []), ['g-safe', d.g_safe]];
   const G = (id, i) => grp(i + 1, id, secs.find((x) => x[0] === id)[1]);
   const main = full
-    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
-    : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${safetyBlock(lang, r, false)}`;
+    ? `${verdictBlock(lang, r)}${paidBlock(lang, r)}${G('g-pass', 0)}${passportBlock(lang, r)}${marketBlock(lang, r)}${G('g-legal', 1)}${wantedBlock(lang, r)}${insuranceBlock(lang, r)}${uaBlock(lang, r, true)}${earlyPlateBlock(lang, fromPlate, early, unverified)}${!r.ua.rows.length && !fromPlate ? plateAddBlock(lang, r.vin) : ''}${usa ? G('g-usa', secs.findIndex((x) => x[0] === 'g-usa')) + usa : ''}${r.mentions ? G('g-web', secs.findIndex((x) => x[0] === 'g-web')) + mentionsBlock(lang, r) : ''}${G('g-safe', secs.length - 1)}${safetyBlock(lang, r, true)}<p class="muted sm">${esc(d.sources_note)} ${esc(fmt(d.asof_full, { t: r.generatedAt.slice(0, 16).replace('T', ' ') }))}</p>`
+    : `${wantedBlock(lang, r)}${conclusionBlock(lang, r)}${riskBlock(lang, r)}${uaBlock(lang, r, false)}${decodeBlock(lang, r)}${marketBlock(lang, r)}${safetyBlock(lang, r, false)}`;
   const toc = `<nav class="panel toc noprint" aria-label="${esc(d.toc_h)}"><h2>${esc(d.toc_h)}</h2><ol>${secs.map(([id, tt]) => `<li><a href="#${id}">${esc(tt)}</a></li>`).join('')}</ol></nav>`;
   const aside = full
     ? `${toc}${actionsBlock(lang)}<div class="panel noprint"><h2>${esc(TT[lang].nav)}</h2>${toolCards(lang)}</div>`

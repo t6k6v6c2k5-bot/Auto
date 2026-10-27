@@ -174,3 +174,25 @@ test('клиентский JS не использует lookbehind (ломает
   const { readFileSync } = await import('node:fs');
   for (const f of ['public/app.js', 'public/tools.js']) assert.ok(!/\(\?<[!=]/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), f);
 });
+
+
+test('рыночная цена: подбор марки и модели, статистика по ценам', async () => {
+  const { findMark, findModel, stats, norm } = await import('../src/ria.js');
+  const marks = [{ name: 'Toyota', value: 79 }, { name: 'Mercedes-Benz', value: 48 }, { name: 'LADA (ВАЗ)', value: 88 }, { name: 'Land Rover', value: 57 }];
+  assert.equal(findMark(marks, 'TOYOTA'), 79);
+  assert.equal(findMark(marks, 'MERCEDES-BENZ'), 48);
+  assert.equal(findMark(marks, 'Land Rover'), 57);
+  assert.equal(findMark(marks, 'Unknownbrand'), null);
+  const models = [{ name: 'Camry', value: 698 }, { name: 'RAV4', value: 715 }, { name: '3 Series', value: 1 }, { name: 'Corolla', value: 702 }];
+  assert.equal(findModel(models, 'Camry'), 698);
+  assert.equal(findModel(models, 'Camry Hybrid'), 698);
+  assert.equal(findModel(models, 'RAV4'), 715);
+  assert.equal(findModel(models, '3-Series'), 1);
+  assert.equal(findModel(models, 'Zzz'), null);
+  assert.equal(norm('LADA (ВАЗ)'), 'lada');
+  const s = stats([10000, 11000, 12000, 13000, 14000, 100, 99999999]);
+  assert.equal(s.total, 5);
+  assert.equal(s.median, 12000);
+  assert.ok(s.p25 < s.median && s.median < s.p75);
+  assert.equal(stats([1000, 2000]), null);
+});
