@@ -18,7 +18,8 @@ const stampFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric
 export const dayOf = (ts) => dayFmt.format(ts);
 export const fmtTs = (ts) => (ts ? stampFmt.format(ts) : '—');
 const hourOf = (ts) => Number(hourFmt.format(ts)) % 24;
-export const daysBack = (n) => Array.from({ length: n }, (_, i) => dayOf(Date.now() - (n - 1 - i) * 864e5));
+// последние n календарных дней по Киеву; арифметика по датам, а не по 24-часовым сдвигам (переход на летнее время не дублирует и не теряет день)
+export const daysBack = (n) => { const [y, m, d] = dayOf(Date.now()).split('-').map(Number); return Array.from({ length: n }, (_, i) => new Date(Date.UTC(y, m - 1, d - (n - 1 - i))).toISOString().slice(0, 10)); };
 
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|bytespider|barkrowler|dataprovider|seokicks|ahrefs|semrush|mj12|dotbot|blexbot|serpstat|netestate|zoominfo|scrapy|httpclient|libwww|requests|http-client|nmap|masscan|nikto|sqlmap|zgrab|censys|shodan|expanse|phantom|selenium|puppeteer|playwright|check_http|^$/i;
 // настоящий браузер всегда шлёт Accept-Language; его отсутствие у «браузерного» UA — признак скрипта
@@ -62,7 +63,13 @@ export function track(req, res, t0, ip, errMsg = '') {
   } catch { /* статистика не критична */ }
 }
 
-export const purgeHits = () => db.prepare('DELETE FROM hits WHERE ts<?').run(Date.now() - 60 * 864e5).changes;
+export const purgeHits = () => {
+  let n = db.prepare('DELETE FROM hits WHERE ts<?').run(Date.now() - 60 * 864e5).changes;
+  // страховка от разрастания (наплыв ботов): держим не больше 400 тыс. записей, самые старые удаляем
+  const total = db.prepare('SELECT COUNT(*) c FROM hits').get().c;
+  if (total > 400000) n += db.prepare('DELETE FROM hits WHERE rowid IN (SELECT rowid FROM hits ORDER BY ts LIMIT ?)').run(total - 300000).changes;
+  return n;
+};
 
 const all = (sql, ...a) => db.prepare(sql).all(...a);
 const one = (sql, ...a) => db.prepare(sql).get(...a);

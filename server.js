@@ -11,7 +11,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { cfg, PLANS, paywallOn, price, CURRENCY, payProvider } from './src/config.js';
+import { cfg, PLANS, paywallOn, CURRENCY, payProvider } from './src/config.js';
 import * as mono from './src/mono.js';
 import * as lemon from './src/lemon.js';
 import { LANGS, dict } from './src/i18n.js';

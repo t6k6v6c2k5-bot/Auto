@@ -522,3 +522,13 @@ ul.scams{margin-left:auto;margin-right:auto}
 @media(max-width:1020px){.pv{max-width:520px}}
 @media(max-width:420px){.pv{padding:18px}.pv-car b{font-size:20px}.pv-g{width:84px;height:84px}}
 .pv-car b{flex-basis:100%;margin:0 0 2px}.pv-rows{margin-bottom:12px}.pv-next{margin-top:14px}
+/* старые Safari/WebView без color-mix: запасные значения, чтобы плитки, навигация и рамки не пропадали */
+@supports not (background:color-mix(in srgb,red,blue)){
+  .tico,.bento .fi,.diff .dn{background:rgba(47,107,255,.13)}
+  .scams .sn{background:rgba(245,158,11,.18)}
+  .vseg{background:var(--surface-2)}
+  .secnav{background:var(--bg,#f4f6fb)}
+  .card:hover,.tool:hover,.guide:hover{border-color:var(--blue)}
+  .verdict.low{border-color:var(--good)}.verdict.mid{border-color:var(--warn)}.verdict.high{border-color:var(--bad)}
+  .paidteaser{background:var(--surface)}
+}
