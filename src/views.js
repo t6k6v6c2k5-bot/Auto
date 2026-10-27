@@ -3,6 +3,7 @@ import { cfg, PLANS, price, paywallOn } from './config.js';
 import { origin } from './http.js';
 import { l100, gpkm } from './fueleco.js';
 import { toolsHomeBlock, diffBlock, toolCards } from './tools-views.js';
+import { guidesHomeBlock } from './guides-views.js';
 import { TT } from './tools-i18n.js';
 import { providerEnabled } from './providers.js';
 import { insuranceEnabled } from './insurance.js';
@@ -47,8 +48,8 @@ const plateEl = (p, sm = false, cc = 'UA') => `<span class="plate${sm ? ' sm' : 
 export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [], sticky = '', preconnect = '', ogUrl = '' }) {
   const alt = LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(abs(req, '/' + l + path))}">`).join('');
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, '\\u003c')}</script>`).join('');
-  const links = [['/tools', 'nav_tools'], ['/usa', 'nav_usa'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
-  const cur = (p) => (path === p || (p === '/tools' && path.startsWith('/tools/')) ? ' aria-current="page"' : '');
+  const links = [['/tools', 'nav_tools'], ['/guides', 'nav_guides'], ['/usa', 'nav_usa'], ...(paywallOn() ? [['/pricing', 'nav_pricing']] : [])];
+  const cur = (p) => (path === p || (p === '/tools' && path.startsWith('/tools/')) || (p === '/guides' && path.startsWith('/guides/')) ? ' aria-current="page"' : '');
   const og = abs(req, `/og-${lang}.png`);
   const url = abs(req, '/' + lang + path);
   return `<!doctype html>
@@ -60,7 +61,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=12">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=13">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -73,7 +74,7 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 <main id="main" tabindex="-1">${body}</main>
 <footer><div class="wrap foot"><div>${logo}<b>VINScope</b><p>${esc(t(lang, 'footer'))}</p></div>
 
-<div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
+<div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/guides">${esc(t(lang, 'nav_guides'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
 <div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
 ${sticky}
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
@@ -140,7 +141,7 @@ ${chip('c3', ['a', '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-
 </div></section>
 <section class="sec" id="what"><div class="wrap"><h2 class="reveal">${esc(d.feat_h)}</h2><ul class="grid3" role="list">${d.feats.map(([h, p], i) => `<li class="card reveal"><svg viewBox="0 0 24 24" class="fi" ${A}><path d="${featIcons[i]}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ul></div></section>
 <section class="sec alt"><div class="wrap"><h2 class="reveal">${esc(d.how_h)}</h2><ol class="steps">${d.steps.map(([h, p]) => `<li class="reveal"><h3>${esc(h)}</h3><p>${esc(p)}</p></li>`).join('')}</ol></div></section>
-${toolsHomeBlock(lang)}${diffBlock(lang)}
+${toolsHomeBlock(lang)}${guidesHomeBlock(lang)}${diffBlock(lang)}
 <section class="sec"><div class="wrap narrow"><h2 class="reveal">${esc(d.faq_h)}</h2>${d.faq.map(([q, a]) => `<details class="reveal"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
 <section class="sec cta"><div class="wrap narrow center"><h2 class="reveal">${esc(d.cta_h)}</h2>${searchForm(lang, '', false, 'b')}<div style="margin-top:48px;text-align:left">${waitlistBox(lang)}</div></div></section>`;
   return layout(req, lang, { title: d.home_title, desc: d.home_desc, path: '/', noindex: !!opts.q, body, jsonld: [orgLd(req, lang), siteLd(req, lang), faqLd(lang)] });

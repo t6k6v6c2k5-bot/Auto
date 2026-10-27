@@ -2,6 +2,8 @@ import { createServer } from 'node:http';
 import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
+import { guidesHub, guidePage } from './src/guides-views.js';
+import { GUIDES, GG } from './src/guides.js';
 import { nbuRate } from './src/nbu.js';
 import { getPhoto } from './src/photo.js';
 const within = (p, ms) => Promise.race([p.catch(() => null), new Promise((r) => setTimeout(() => r(null), ms))]);
@@ -176,6 +178,8 @@ async function page(req, res, url, lang, rest) {
     const id = rest.slice(7);
     return html(toolPage(req, lang, id, { rate: id === 'customs' ? await nbuRate() : null }));
   }
+  if (rest === '/guides') return html(guidesHub(req, lang));
+  if (rest.startsWith('/guides/') && GUIDES.includes(rest.slice(8))) return html(guidePage(req, lang, rest.slice(8)));
   if (rest === '/usa') return html(V.usaPage(req, lang));
   if (rest === '/pricing') return html(V.pricingPage(req, lang));
   if (rest === '/sources') return redirect(res, `/${lang}/`, 301);
@@ -258,8 +262,13 @@ async function page(req, res, url, lang, rest) {
 
 // Дата последнего изменения контента — для sitemap
 const LASTMOD = new Date(Math.max(...['src/i18n.js', 'src/views.js'].map((f) => statSync(join(ROOT, f)).mtimeMs))).toISOString().slice(0, 10);
+// Краткое описание сайта для ИИ-поиска и ассистентов (llms.txt)
+function llmsTxt(req) {
+  const b = origin(req); const G = GG.uk;
+  return `# VINScope\n\n> Безкоштовна перевірка авто за VIN і держномером в Україні: розшук, історія реєстрацій, відкличні кампанії, оцінка ризику. Інструменти покупця та гайди. Мови: українська, російська, англійська.\n\n## Основне\n- [Головна](${b}/uk/): перевірка за VIN або номером\n- [Інструменти](${b}/uk/tools): розшифровка VIN, калькулятор розмитнення, перевірка пробігу, чек-лист\n- [Перевірка на розшук](${b}/uk/wanted)\n- [Перевірка за держномером](${b}/uk/plate)\n- [Авто зі США](${b}/uk/usa)\n\n## Гайди\n${GUIDES.map((g) => `- [${G.a[g].h}](${b}/uk/guides/${g})`).join('\n')}\n`;
+}
 function sitemap(req) {
-  const base = origin(req); const paths = ['/', '/tools', ...TOOLS.map((t) => '/tools/' + t), '/wanted', '/plate', '/usa', '/pricing', '/terms'];
+  const base = origin(req); const paths = ['/', '/tools', ...TOOLS.map((t) => '/tools/' + t), '/guides', ...GUIDES.map((g) => '/guides/' + g), '/wanted', '/plate', '/usa', '/pricing', '/terms'];
   const loc = (l, p) => `${base}/${l}${p === '/' ? '/' : p}`;
   const urls = paths.flatMap((p) => LANGS.map((l) => `<url><loc>${loc(l, p)}</loc><lastmod>${LASTMOD}</lastmod>${LANGS.map((a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${loc(a, p)}"/>`).join('')}<xhtml:link rel="alternate" hreflang="x-default" href="${loc('uk', p)}"/></url>`));
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join('')}</urlset>`;
@@ -309,6 +318,7 @@ const server = createServer(async (req, res) => {
       if (have && have !== want && (have === 'www.' + want || have.endsWith('.up.railway.app'))) { res.writeHead(301, { location: cfg.baseUrl + req.url }); return res.end(); }
     }
     if (pathname === '/robots.txt') return send(req, res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /*/checkout\nSitemap: ${origin(req)}/sitemap.xml\n`, 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
+    if (pathname === '/llms.txt') return send(req, res, 200, llmsTxt(req), 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/admin') return admin(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);

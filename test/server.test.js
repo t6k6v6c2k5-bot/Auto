@@ -79,3 +79,19 @@ test('Lemon Squeezy: подпись вебхука и проверка опла�
   assert.equal(lemon.paidOrder({ ...ev, data: { ...ev.data, attributes: { ...ev.data.attributes, status: 'pending' } } }, 240), null);
   cfg.lemonSecret = '';
 });
+
+test('гайды: статьи есть на трёх языках, с разметкой Article, без названий источников', async () => {
+  const { GUIDES, GG } = await import('../src/guides.js');
+  const { guidePage, guidesHub } = await import('../src/guides-views.js');
+  const req = { headers: { host: 'vinscope.example' } };
+  for (const lang of ['uk', 'ru', 'en']) {
+    assert.match(guidesHub(req, lang), /"@type":"ItemList"/);
+    for (const g of GUIDES) {
+      assert.ok(GG[lang].a[g], `${lang}/${g} есть в словаре`);
+      const h = guidePage(req, lang, g);
+      assert.match(h, /"@type":"Article"/);
+      assert.match(h, /rel="canonical" href="https:\/\/vinscope.example\/\w\w\/guides\//);
+      assert.doesNotMatch(h, /NHTSA|Apibara|Copart|IAAI|data\.gov\.ua/i);
+    }
+  }
+});
