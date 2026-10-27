@@ -508,3 +508,17 @@ footer{margin-top:0}
 .pv-open{display:flex;margin-top:4px;padding:6px 2px 2px}.pv-rows{margin-bottom:10px}
 @media(max-width:1020px){.visual{justify-content:center;margin-top:6px}.pv{transform:none;width:100%;max-width:460px}.pv::before{display:none}}
 ul.scams{margin-left:auto;margin-right:auto}
+
+/* пример отчёта: подробная версия — вердикт, из чего сложен балл, проверки, что делать дальше */
+.pv{width:min(100%,460px);padding:22px}
+.pv-car{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 16px}.pv-car b{font-size:22px;letter-spacing:-.02em;margin-right:6px}
+.pv-car i{font-style:normal;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#c6d4ee}
+.pv-main{align-items:flex-start;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.1)}.pv-g{width:96px;height:96px;margin-top:4px}
+.pv-k{display:block;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8fa6d3}.pv-lvl{display:block;font-size:20px;margin:2px 0 8px;letter-spacing:-.01em}
+.pv-main .pv-lvl{margin-bottom:8px}
+.pv-f{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:13px;color:#c0cfe9;line-height:1.35}.pv-f li{display:grid;grid-template-columns:30px 1fr;gap:6px}.pv-f em{font-style:normal;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.pv-rows{margin-bottom:14px}.pv-rows li{padding:8px 11px;font-size:13.5px}
+.pv-next{margin:0 0 12px;padding:11px 13px;border-radius:12px;background:rgba(64,110,255,.14);border:1px solid rgba(127,162,255,.25);font-size:13px;line-height:1.45;color:#d5e1fb}.pv-next span{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9db9ff;margin-bottom:3px}
+@media(max-width:1020px){.pv{max-width:520px}}
+@media(max-width:420px){.pv{padding:18px}.pv-car b{font-size:20px}.pv-g{width:84px;height:84px}}
+.pv-car b{flex-basis:100%;margin:0 0 2px}.pv-rows{margin-bottom:12px}.pv-next{margin-top:14px}
