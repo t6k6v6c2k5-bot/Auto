@@ -74,6 +74,8 @@ export const stats = () => ({
 db.exec('CREATE TABLE IF NOT EXISTS ria_cache(k TEXT PRIMARY KEY, ts INTEGER NOT NULL, json TEXT NOT NULL)');
 export const getRia = (k) => db.prepare('SELECT ts, json FROM ria_cache WHERE k=?').get(k) || null;
 export const setRia = (k, json) => db.prepare('INSERT OR REPLACE INTO ria_cache(k,ts,json) VALUES(?,?,?)').run(k, Date.now(), json);
+// пустые результаты цен перепроверяем при старте (мог быть временный сбой источника)
+export const dropRiaMisses = () => db.prepare("DELETE FROM ria_cache WHERE json='null' AND k LIKE 'price:%'").run().changes;
 export const getPhotoRow = (key) => db.prepare('SELECT url,page,title,ts FROM photos WHERE key=?').get(key);
 export const setPhotoRow = (key, url, page, title) => db.prepare('INSERT OR REPLACE INTO photos(key,url,page,title,ts) VALUES(?,?,?,?,?)').run(key, url, page, title, Date.now());
 export const returnCredit = (code) => db.prepare('UPDATE credits SET remaining=remaining+1 WHERE code=?').run(code);

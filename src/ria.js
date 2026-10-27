@@ -42,7 +42,9 @@ async function call(path, params = {}) {
     const r = await fetch(u, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
     if (!r.ok) throw new Error('ria ' + r.status);
     const t = await r.text(); if (t.trimStart().startsWith('<')) throw new Error('ria refused'); // сервис ответил не JSON: не повторяем и не обходим
-    return JSON.parse(t);
+    const j = JSON.parse(t);
+    if (j && !Array.isArray(j) && j.error) throw new Error('ria error response'); // отказ защиты приходит JSON-ом с полем error: это сбой, а не «нет объявлений»
+    return j;
   });
   chain = run.catch(() => {});
   return run;
@@ -63,7 +65,7 @@ export async function marketPrice(veh) {
     const models = await cached('models:' + markId, LIST_TTL, () => call(`/categories/1/marks/${markId}/models`));
     const modelId = models && findModel(models, veh.model); if (!modelId) return null;
     return await cached(`price:${markId}:${modelId}:${year}`, PRICE_TTL, async () => {
-      const one = async (y) => (await call('/average_price', { main_category: 1, marka_id: markId, model_id: modelId, yers: y }))?.prices || [];
+      const one = async (y) => { const j = await call('/average_price', { main_category: 1, marka_id: markId, model_id: modelId, yers: y }); if (!Array.isArray(j?.prices)) throw new Error('ria bad price response'); return j.prices; };
       let prices = await one(year), years = String(year);
       if (prices.length < 8) { prices = [...prices, ...(await one(year - 1)), ...(await one(year + 1))]; years = `${year - 1}–${year + 1}`; } // мало объявлений: берём соседние годы
       const s = stats(prices); return s ? { ...s, years } : null;
@@ -72,4 +74,4 @@ export async function marketPrice(veh) {
 }
 
 // прогрев при старте: список марок в кэш, чтобы первый отчёт не ждал лишних запросов
-export const warmRia = () => { if (cfg.riaKey) cached('marks', LIST_TTL, () => call('/categories/1/marks')).catch(() => {}); };
+export const warmRia = () => { if (!cfg.riaKey) return; store.dropRiaMisses(); cached('marks', LIST_TTL, () => call('/categories/1/marks')).catch(() => {}); };
