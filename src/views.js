@@ -68,7 +68,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=16">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=17">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
