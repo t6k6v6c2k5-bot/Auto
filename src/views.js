@@ -28,6 +28,13 @@ const REG = {
 };
 const rv = (lang, v) => { const k = String(v || '').trim().toUpperCase(); return REG[lang]?.[k] || REG[lang]?.[k.split('-')[0]] || (nice(k).charAt(0) + nice(k).slice(1)); };
 const engineText = (lang, e) => String(e || '').replace(/(\d+(?:\.\d+)?)L\b/, lang === 'en' ? '$1 L' : '$1 л').replace(/ cyl\b/, lang === 'en' ? ' cyl' : ' цил.').replace(/ hp\b/, lang === 'en' ? ' hp' : ' к.с.');
+// «79 тыс.», «25,6 млн», «27 окт.»: короткая запись для плашки в шапке (точное значение — в подсказке)
+const LOC = { uk: 'uk-UA', ru: 'ru-RU', en: 'en-US' };
+// число крупно, единица мелко: «79,3 <тыс.>», «25,6 <млн>», «27 <окт.>»; точное значение — в подсказке
+const split = (parts, big, small) => ({ n: parts.filter((x) => big.includes(x.type)).map((x) => x.value).join(''), u: parts.filter((x) => small.includes(x.type)).map((x) => x.value).join('').trim() });
+const compact = (lang, n) => split(new Intl.NumberFormat(LOC[lang], { notation: 'compact', maximumFractionDigits: 1 }).formatToParts(n), ['integer', 'decimal', 'fraction', 'group'], ['compact']);
+const shortDate = (lang, iso) => { const t = Date.parse(iso); return t ? split(new Intl.DateTimeFormat(LOC[lang], { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' }).formatToParts(t), ['day'], ['month']) : { n: '—', u: '' }; };
+const stat = (lang, exact, short, label) => `<div title="${esc(exact)}"><b aria-label="${esc(exact)}">${esc(short.n)}${short.u ? `<i> ${esc(short.u)}</i>` : ''}</b><span>${esc(label)}</span></div>`;
 const dateOf = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 
 // ---------- иконки (декоративные: aria-hidden) ----------
@@ -61,7 +68,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=14">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=16">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -132,7 +139,7 @@ export function home(req, lang, stats, opts = {}) {
 <span class="badge-pill"><i ${A}></i>${esc(d.hero_badge)}</span>
 <h1>${h1Html(d.h1)}</h1><p class="lead">${esc(d.sub)}</p>
 ${searchForm(lang, opts.q || '', true, 'a', opts.err || '')}
-<div class="herostats">${stats.wantedCount ? `<div><b>${nf(stats.wantedCount)}</b><span>${esc(d.stat_wanted)}</span></div>` : ''}${stats.registryRecords ? `<div><b>${nf(stats.registryRecords)}</b><span>${esc(d.stat_reg)}</span></div>` : ''}${stats.wantedUpdatedAt ? `<div><b>${esc(dateOf(stats.wantedUpdatedAt))}</b><span>${esc(d.stat_upd)}</span></div>` : ''}</div>
+<div class="herostats">${stats.wantedCount ? stat(lang, nf(stats.wantedCount), compact(lang, stats.wantedCount), d.stat_wanted) : ''}${stats.registryRecords ? stat(lang, nf(stats.registryRecords), compact(lang, stats.registryRecords), d.stat_reg) : ''}${stats.wantedUpdatedAt ? stat(lang, dateOf(stats.wantedUpdatedAt), shortDate(lang, stats.wantedUpdatedAt), d.stat_upd) : ''}</div>
 </div>
 <div class="visual" aria-hidden="true">${carSvg()}
 ${chip('c1', ['g', '<path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>'], d.t_wanted_ok, d.wanted_h)}
