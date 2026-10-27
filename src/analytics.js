@@ -21,7 +21,7 @@ const hourOf = (ts) => Number(hourFmt.format(ts)) % 24;
 // последние n календарных дней по Киеву; арифметика по датам, а не по 24-часовым сдвигам (переход на летнее время не дублирует и не теряет день)
 export const daysBack = (n) => { const [y, m, d] = dayOf(Date.now()).split('-').map(Number); return Array.from({ length: n }, (_, i) => new Date(Date.UTC(y, m - 1, d - (n - 1 - i))).toISOString().slice(0, 10)); };
 
-const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|bytespider|barkrowler|dataprovider|seokicks|ahrefs|semrush|mj12|dotbot|blexbot|serpstat|netestate|zoominfo|scrapy|httpclient|libwww|requests|http-client|nmap|masscan|nikto|sqlmap|zgrab|censys|shodan|expanse|phantom|selenium|puppeteer|playwright|check_http|^$/i;
+const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|monitor|uptime|curl|wget|python|go-http|java\/|okhttp|axios|node-fetch|headless|lighthouse|pingdom|statuscake|zabbix|scanner|bytespider|barkrowler|dataprovider|seokicks|ahrefs|semrush|mj12|dotbot|blexbot|serpstat|netestate|zoominfo|scrapy|httpclient|libwww|requests|http-client|nmap|masscan|nikto|sqlmap|zgrab|censys|shodan|expanse|phantom|selenium|puppeteer|playwright|vinscopeqa|check_http|^$/i;
 // настоящий браузер всегда шлёт Accept-Language; его отсутствие у «браузерного» UA — признак скрипта
 const isBot = (ua, h) => BOT.test(ua) || !h['accept-language'];
 export const isBotReq = (req) => isBot(String(req.headers['user-agent'] || ''), req.headers);
@@ -37,10 +37,13 @@ const SKIP = /^\/(healthz|admin|webhook|api\/lotimg)|\.[a-z0-9]{2,5}$/i;
 
 const ins = db.prepare('INSERT INTO hits(ts,day,hour,kind,path,lang,ref,dev,vid,status,ms,note,agent) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)');
 
+// мобильные сети меняют IP между запросами одного человека: считаем по подсети (IPv4 /24, IPv6 /48), иначе один человек выглядит как несколько
+const netOf = (ip) => { const x = String(ip || ''); return x.includes(':') ? x.split(':').slice(0, 3).join(':') : x.split('.').slice(0, 3).join('.'); };
 // вызывается после отправки ответа; ошибки аналитики никогда не ломают сайт
 export function track(req, res, t0, ip, errMsg = '') {
   try {
     if (req.method !== 'GET') return;
+    if (/(?:^|;\s*)vs_own=1(?:;|$)/.test(req.headers.cookie || '')) return; // устройство владельца (после входа в админку) в статистику не идёт
     const u = new URL(req.url, 'http://x');
     const p = u.pathname;
     if (SKIP.test(p)) return;
@@ -57,7 +60,7 @@ export function track(req, res, t0, ip, errMsg = '') {
     const rh = String(req.headers.referer || '');
     if (rh) { try { const h = new URL(rh).host.replace(/^www\./, ''); if (h !== String(req.headers.host || '').replace(/^www\./, '')) ref = h.slice(0, 60); } catch { /* мусор */ } }
     const utm = u.searchParams.get('utm_source'); if (utm) ref = ('utm:' + utm).slice(0, 40);
-    const vid = createHash('sha256').update(`${ip}|${ua}|${day}|${SALT}`).digest('hex').slice(0, 12);
+    const vid = createHash('sha256').update(`${netOf(ip)}|${ua}|${day}|${SALT}`).digest('hex').slice(0, 12);
     const kind = dev === 'bot' ? 'bot' : status >= 500 ? 'error' : isApi ? 'api' : rest === '/check' ? 'check' : 'page';
     ins.run(ts, day, hourOf(ts), kind, rest.slice(0, 80), m ? m[1] : '', ref, dev, vid, status, Date.now() - t0, kind === 'error' ? errMsg.slice(0, 160) : (req.evNote || ''), agentOf(ua));
   } catch { /* статистика не критична */ }
