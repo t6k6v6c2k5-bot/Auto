@@ -16,11 +16,11 @@ const css = `
 @media(prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#121c2e;--ink:#e6edf7;--mut:#8da0ba;--line:#22304a;--blue:#60a5fa;--org:#fbbf24;--good:#4ade80;--bad:#f87171;--side:#060d1a}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
-.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
 aside{background:var(--side);color:#cbd5e1;padding:20px 14px;position:sticky;top:0;height:100vh}
 aside b{display:block;color:#fff;font-size:18px;margin:0 8px 18px}aside small{display:block;margin:18px 8px 0;color:#7b8aa3;font-size:12px}
 aside a{display:block;padding:9px 12px;border-radius:9px;color:#cbd5e1;margin-bottom:2px}aside a:hover{background:#ffffff14;text-decoration:none}aside a.on{background:#2563eb;color:#fff}
-main{padding:24px;max-width:1180px;width:100%}
+main{padding:24px;max-width:1180px;width:100%;min-width:0}
 h1{margin:0 0 4px;font-size:24px}h2{font-size:16px;margin:0 0 12px}.sub{color:var(--mut);margin:0 0 20px}
 .grid{display:grid;gap:14px}.k4{grid-template-columns:repeat(4,minmax(0,1fr))}.k3{grid-template-columns:repeat(3,minmax(0,1fr))}.k2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 form.inline{display:flex;gap:8px;flex-wrap:wrap}input{font:16px ui-monospace,monospace;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}button,.btn{font:inherit;padding:8px 14px;border:0;border-radius:9px;background:var(--blue);color:#fff;cursor:pointer}
 .legend{display:flex;gap:14px;font-size:13px;color:var(--mut);margin-bottom:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
 svg.chart{width:100%;height:auto;display:block}.chart text{fill:var(--mut);font-size:10px}
-@media(max-width:900px){.shell{grid-template-columns:1fr}aside{position:static;height:auto;display:flex;gap:6px;overflow-x:auto;padding:10px}aside b,aside small{display:none}aside a{white-space:nowrap;margin:0}.k4{grid-template-columns:repeat(2,minmax(0,1fr))}.k3,.k2{grid-template-columns:1fr}main{padding:14px}}
+@media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}aside{position:static;height:auto;display:flex;gap:6px;overflow-x:auto;padding:10px}aside b,aside small{display:none}aside a{white-space:nowrap;margin:0}.k4{grid-template-columns:repeat(2,minmax(0,1fr))}.k3,.k2{grid-template-columns:1fr}main{padding:14px}}
 `;
 
 const kpi = (l, v, s = '') => `<div class="card kpi"><div class="l">${esc(l)}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
