@@ -3,7 +3,7 @@ import { lookupPlate, looksLikeNlPlate } from './src/rdw.js';
 import { toolsHub, toolPage } from './src/tools-views.js';
 import { TOOLS } from './src/tools-i18n.js';
 import { guidesHub, guidePage } from './src/guides-views.js';
-import { warmRia, adIdFromUrl, adById } from './src/ria.js';
+import { warmRia, adIdFromUrl, adById, marketPrice } from './src/ria.js';
 import * as cm from './src/comments.js';
 import * as wt from './src/watch.js';
 import { GUIDES, GG } from './src/guides.js';
@@ -233,7 +233,9 @@ async function page(req, res, url, lang, rest) {
     if (hist.rows.length) {
       const v0 = hist.groups[0]?.summary.vehicle || {};
       const photo = v0.brand ? await within(getPhoto(v0.brand, v0.model, v0.year), 5000) : null;
-      return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate), photo));
+      const mk = v0.brand && v0.model && v0.year && !isBotReq(req) ? await within(marketPrice({ make: v0.brand, model: v0.model, year: v0.year }), 3500) : null;
+      const fx = mk ? await within(nbuRate('USD').catch(() => null), 2000) : null;
+      return priv(V.plateReport(req, lang, plate, hist, plateCoverage(), wantedByPlate(plate), photo, mk ? { ...mk, uah: fx?.rate || null } : null));
     }
     const nl = await lookupPlate(plate);
     if (nl) {

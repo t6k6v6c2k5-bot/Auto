@@ -616,7 +616,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, ogUrl: abs(req, `/${lang}/check?q=${encodeURIComponent(r.vin)}`), preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 
-export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null) {
+export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null, market = null) {
   const d = dict(lang);
   const g0 = hist.groups[0];
   const v = g0?.summary.vehicle;
@@ -637,7 +637,7 @@ export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null) 
   const next = hit ? d.c_wanted : [d.plate_vin_hint, ...d.c_default];
   const main = `${wantedHtml}<section class="panel" aria-labelledby="h-next"><h2 id="h-next">${esc(d.concl_h)}</h2><ul class="check tight">${next.map((x) => `<li>${ic.check}<span>${tel(x)}</span></li>`).join('')}</ul></section>
 <div class="notice info">${esc(fmt(d.plate_note, { from: pcov.from || '—', to: pcov.to || '—' }))}${hist.groups.length > 1 ? ` <b>${esc(plural(lang, hist.groups.length, d.plate_groups))}.</b>` : ''}</div>${groupsHtml}
-${searchForm(lang, '', false, 'b')}<p class="muted sm">${esc(d.sources_note)}</p>`;
+${market ? marketBlock(lang, { market, vehicle: { make: v?.brand, model: v?.model } }) : ''}<p class="muted sm">${esc(d.sources_note)}</p>`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
 <div class="vehicle${photo ? '' : ' solo'}">${photo ? figureHtml(lang, photo, sub) : ''}<div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
 <section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: plate, postKind: 'plate', keys: [plate] })}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
