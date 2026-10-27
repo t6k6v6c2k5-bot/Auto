@@ -44,11 +44,12 @@ export async function buildReport(vin, opts = {}) {
   if (opts.withProvider) return buildReportFresh(vin, opts);
   const key = `${vin}|${opts.plate || ''}`; const hit = reportCache.get(key);
   if (hit && Date.now() - hit.t < 600e3) return hit.v;
+  if (opts.market === false) return buildReportFresh(vin, opts); // боты и скрипты: без платного для нас источника цен и без записи в общий кэш
   const v = await buildReportFresh(vin, opts);
   if (v.decoded?.found || v.ua?.rows?.length || v.wanted?.length) { reportCache.set(key, { t: Date.now(), v }); if (reportCache.size > 300) reportCache.delete(reportCache.keys().next().value); }
   return v;
 }
-async function buildReportFresh(vin, { withProvider = false, plan = 'single', plate = '' } = {}) {
+async function buildReportFresh(vin, { withProvider = false, plan = 'single', plate = '', market: wantMarket = true } = {}) {
   const t0 = Date.now();
   const decoded = await withDeadline(decodeVin(vin), 6000, { found: false, unavailable: true });
   const left = () => Math.max(1500, 9000 - (Date.now() - t0));
@@ -75,7 +76,7 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
     withProvider ? withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null) : null,
     photoP,
     // рыночная цена в Украине (бесплатный источник с кэшем): отчёт не ждёт дольше пары секунд
-    veh.make && veh.model && veh.year ? withDeadline(marketPrice(veh), 3500, null) : null,
+    wantMarket && veh.make && veh.model && veh.year ? withDeadline(marketPrice(veh), 3500, null) : null,
     withDeadline(nbuRate('USD').catch(() => null), 2500, null),
   ]);
   const mismatch = consistency(decoded, ua);

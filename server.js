@@ -198,7 +198,7 @@ async function page(req, res, url, lang, rest) {
       req.evNote = 'vin';
       if (!isBotReq(req)) store.logSearch(v.vin, lang); // запросы ботов и скриптов в статистику проверок не идут
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
-      const r = await buildReport(v.vin, { withProvider: false, plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // платные источники — только в оплаченном отчёте
+      const r = await buildReport(v.vin, { withProvider: false, plate: looksLikePlate(fromPlate) ? fromPlate : '', market: !isBotReq(req) }); // платные источники — только в оплаченном отчёте
       // пришли по номеру: добавим записи из архивов до 2021 года (без VIN), если они совпадают с этим авто по марке и году
       let early = [], unverified = false;
       if (fromPlate && looksLikePlate(fromPlate)) {
