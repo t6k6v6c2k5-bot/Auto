@@ -657,3 +657,7 @@ Object.assign(D.en, { pv_tag: 'Sample report · USA', pv_title: 'Toyota Corolla,
 Object.assign(D.uk, { mk_h: 'Ринкова ціна в Україні', mk_med: 'медіана оголошень', mk_range: 'Типовий діапазон', mk_basis: 'За {n} оголошеннями для {car} ({years} р.)', mk_note: 'Орієнтир за відкритими оголошеннями, а не оцінка конкретного авто: ціна залежить від пробігу, стану, комплектації та торгу.', mk_uah: '≈ {v} ₴ за курсом НБУ' });
 Object.assign(D.ru, { mk_h: 'Рыночная цена в Украине', mk_med: 'медиана объявлений', mk_range: 'Типичный диапазон', mk_basis: 'По {n} объявлениям для {car} ({years} г.)', mk_note: 'Ориентир по открытым объявлениям, а не оценка конкретного авто: цена зависит от пробега, состояния, комплектации и торга.', mk_uah: '≈ {v} ₴ по курсу НБУ' });
 Object.assign(D.en, { mk_h: 'Market price in Ukraine', mk_med: 'median listing price', mk_range: 'Typical range', mk_basis: 'Based on {n} listings for {car} ({years})', mk_note: 'A guide from public listings, not a valuation of this exact car: the price depends on mileage, condition, trim and negotiation.', mk_uah: '≈ {v} UAH at the NBU rate' });
+
+Object.assign(D.uk, { f_prices: 'Ринкові ціни за даними' });
+Object.assign(D.ru, { f_prices: 'Рыночные цены по данным' });
+Object.assign(D.en, { f_prices: 'Market prices based on data from' });
