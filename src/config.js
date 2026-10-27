@@ -31,7 +31,8 @@ export const cfg = {
   operatorName: process.env.OPERATOR_NAME || '',            // ФОП/ТОВ, ЄДРПОУ, адреса — для оферты
   operatorDetails: process.env.OPERATOR_DETAILS || '',
   riaKey: process.env.RIA_API_KEY || '',                        // рыночные цены в Украине (открытый API объявлений)
-  riaDailyLimit: Number(process.env.RIA_DAILY_LIMIT) || 1500,
+  riaDailyLimit: Number(process.env.RIA_DAILY_LIMIT) || 1000,
+  riaHourlyLimit: Number(process.env.RIA_HOURLY_LIMIT) || 60,   // у бесплатного ключа есть часовой лимит; держим запас
   plausible: process.env.PLAUSIBLE_DOMAIN || '',
 };
 // Без Stripe-ключа сайт работает в режиме запуска: полный отчёт бесплатный (реальные данные), оплата не требуется.

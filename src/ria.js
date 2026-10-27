@@ -6,7 +6,7 @@ import * as store from './db.js';
 const BASE = 'https://developers.ria.com/auto';
 const UA = 'VINScope/1.0 (+https://vinscope.com.ua; vehicle check service)'; // честное имя клиента
 const LIST_TTL = 30 * 864e5, PRICE_TTL = 24 * 3600e3, MISS_TTL = 3 * 864e5;
-let chain = Promise.resolve(), last = 0, spent = { day: '', n: 0 };
+let chain = Promise.resolve(), last = 0, spent = { day: '', n: 0 }, hour = { h: -1, n: 0 }, pausedUntil = 0;
 
 export const norm = (s) => String(s || '').toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-zа-яіїєґ0-9]/g, '');
 
@@ -35,15 +35,19 @@ export function stats(prices) {
 async function call(path, params = {}) {
   const day = new Date().toISOString().slice(0, 10); if (spent.day !== day) spent = { day, n: 0 };
   if (spent.n >= cfg.riaDailyLimit) throw new Error('ria daily limit');
+  if (Date.now() < pausedUntil) throw new Error('ria paused'); // источник сообщил о превышении лимита: не стучимся, пока не пройдёт пауза
+  const h = Math.floor(Date.now() / 3600e3); if (hour.h !== h) hour = { h, n: 0 };
+  if (hour.n >= cfg.riaHourlyLimit) throw new Error('ria hourly limit');
   const run = chain.then(async () => {
     const wait = 350 - (Date.now() - last); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    last = Date.now(); spent.n++;
+    last = Date.now(); spent.n++; hour.n++;
     const u = new URL(BASE + path); u.searchParams.set('api_key', cfg.riaKey); Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
     const r = await fetch(u, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+    if (r.status === 429) { pausedUntil = Date.now() + 15 * 60e3; throw new Error('ria over limit'); }
     if (!r.ok) throw new Error('ria ' + r.status);
     const t = await r.text(); if (t.trimStart().startsWith('<')) throw new Error('ria refused'); // сервис ответил не JSON: не повторяем и не обходим
     const j = JSON.parse(t);
-    if (j && !Array.isArray(j) && j.error) throw new Error('ria error response'); // отказ защиты приходит JSON-ом с полем error: это сбой, а не «нет объявлений»
+    if (j && !Array.isArray(j) && j.error) { if (j.error_type === 'HourOverlimit') pausedUntil = Date.now() + 15 * 60e3; throw new Error('ria error response'); } // отказ защиты приходит JSON-ом с полем error: это сбой, а не «нет объявлений»
     return j;
   });
   chain = run.catch(() => {});
