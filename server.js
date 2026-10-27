@@ -24,6 +24,8 @@ import { ipOf, limited, origin, send, json, redirect, readBody, serveStatic } fr
 import * as store from './src/db.js';
 import * as stripe from './src/stripe.js';
 import * as V from './src/views.js';
+import { track, purgeHits, waitlistAll, fmtTs } from './src/analytics.js';
+import { adminPage } from './src/admin-views.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PUB = join(ROOT, 'public');
@@ -189,9 +191,10 @@ async function page(req, res, url, lang, rest) {
   if (rest === '/check') {
     const raw = url.searchParams.get('q') || url.searchParams.get('vin') || '';
     if (!raw) return redirect(res, `/${lang}/`, 301);
-    if (limited('chk:' + ipOf(req), 60)) return priv(V.messagePage(req, lang, L(lang, 'err_rate_h'), L(lang, 'err_rate')), 429);
+    if (limited('chk:' + ipOf(req), 60)) { req.evNote = 'limited'; return priv(V.messagePage(req, lang, L(lang, 'err_rate_h'), L(lang, 'err_rate')), 429); }
     const v = validateVin(raw);
     if (v.ok) {
+      req.evNote = 'vin';
       store.logSearch(v.vin, lang);
       const fromPlate = normalizePlate(url.searchParams.get('p') || '');
       const r = await buildReport(v.vin, { withProvider: false, plate: looksLikePlate(fromPlate) ? fromPlate : '' }); // платные источники — только в оплаченном отчёте
@@ -208,7 +211,8 @@ async function page(req, res, url, lang, rest) {
       return priv(V.checkPage(req, lang, r, { full: !paywallOn(), fromPlate: fromPlate && looksLikePlate(fromPlate) ? fromPlate : '', early, unverified }));
     }
     const plate = normalizePlate(raw);
-    if (!looksLikePlate(plate) && !looksLikeNlPlate(plate)) return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`);
+    if (!looksLikePlate(plate) && !looksLikeNlPlate(plate)) { req.evNote = 'invalid'; return redirect(res, `/${lang}/?q=${encodeURIComponent(raw.slice(0, 40))}&e=${v.error || 'bad'}`); }
+    req.evNote = 'plate';
     store.logSearch(plate, lang);
     const hit = vinsByPlate(plate)[0];
     if (hit) return redirect(res, `/${lang}/check?q=${hit.vin}&p=${plate}`);
@@ -220,9 +224,11 @@ async function page(req, res, url, lang, rest) {
     }
     const nl = await lookupPlate(plate);
     if (nl) {
+      req.evNote = 'plate-nl';
       nl.photo = await within(getPhoto(nl.brand, nl.model, Number(String(nl.firstAdmission).slice(0, 4)) || null), 5000);
       return priv(V.rdwReport(req, lang, plate, nl, wantedByPlate(plate)));
     }
+    req.evNote = 'plate-nf';
     return priv(V.plateNotFound(req, lang, plate, totalCoverage(), wantedByPlate(plate)));
   }
   if (rest === '/checkout') {
@@ -294,20 +300,22 @@ async function adminReport(req, res, url) {
   return send(req, res, 200, V.checkPage(req, lang, r, { full: true }), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
 }
 
-function admin(req, res) {
+function admin(req, res, url) {
   if (!adminAuth(req, res)) return;
-  const s = store.stats();
-  const rows = s.recent.map((r) => `<tr><td>${V.esc(r.id)}</td><td>${V.esc(r.vin)}</td><td>${V.esc(r.plan)}</td><td>${V.esc(r.status)}</td><td>${price(r.amount)}</td><td>${new Date(r.created_at).toISOString().slice(0, 16)}</td></tr>`).join('');
-  const c = coverage();
-  send(req, res, 200, `<!doctype html><meta charset=utf-8><meta name=robots content=noindex><meta name=referrer content=no-referrer><link rel=stylesheet href=/styles.css><body style="padding:24px"><h1>VINScope admin</h1>
-<p><b>Paid orders (Stripe):</b> ${s.paid.c} · <b>Revenue:</b> ${price(s.paid.s)} · <b>Searches:</b> ${s.searches} (7d: ${s.searches7}) · <b>Waitlist:</b> ${s.waitlist}</p>
-<p><b>Wanted:</b> ${wantedState.count} (upd ${V.esc(wantedState.updatedAt)}) · <b>Registry:</b> ${V.esc(JSON.stringify(c))} · worker: ${V.esc(JSON.stringify(regStatus))}</p>
-<p>${s.byStatus.map((x) => `${V.esc(x.status)}: ${x.c}`).join(' · ')}</p><p>Top VINs: ${s.topVins.map((x) => `${V.esc(x.vin)} (${x.c})`).join(', ')}</p>
-<form action=/admin/report method=get style="margin:16px 0"><b>Полный (платный) отчёт:</b> <input name=vin placeholder=VIN maxlength=17 style="font:16px monospace;padding:6px"> <button>Открыть</button> <small>тратит запросы платных поставщиков</small></form>
-<table><tr><th>id<th>vin<th>plan<th>status<th>amount<th>created</tr>${rows}</table>`, 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
+  const ctx = { stats: store.stats(), wanted: wantedState, cov: coverage(), regStatus, paywall: paywallOn(), provider: payProvider() };
+  send(req, res, 200, adminPage(url.searchParams.get('tab') || 'overview', Number(url.searchParams.get('d')) || 0, ctx), 'text/html; charset=utf-8', { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...NOINDEX });
+}
+// выгрузка листа ожидания (CSV; значения, начинающиеся с = + - @, экранируются от формул Excel)
+function adminWaitlist(req, res) {
+  if (!adminAuth(req, res)) return;
+  const cell = (v) => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return '"' + x.replace(/"/g, '""') + '"'; };
+  const csv = 'email,lang,created,utm\n' + waitlistAll(100000).map((r) => [r.email, r.lang, fmtTs(r.created_at), r.utm].map(cell).join(',')).join('\n') + '\n';
+  send(req, res, 200, csv, 'text/csv; charset=utf-8', { 'cache-control': 'no-store', 'content-disposition': 'attachment; filename="waitlist.csv"', ...NOINDEX });
 }
 
 const server = createServer(async (req, res) => {
+  const t0 = Date.now(); let failMsg = '';
+  res.on('finish', () => track(req, res, t0, ipOf(req), failMsg));
   try {
     const url = new URL(req.url, 'http://x');
     let { pathname } = url;
@@ -320,7 +328,8 @@ const server = createServer(async (req, res) => {
     if (pathname === '/robots.txt') return send(req, res, 200, `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /*/checkout\nSitemap: ${origin(req)}/sitemap.xml\n`, 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/llms.txt') return send(req, res, 200, llmsTxt(req), 'text/plain; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
     if (pathname === '/sitemap.xml') return send(req, res, 200, sitemap(req), 'application/xml; charset=utf-8', { 'cache-control': 'public, max-age=3600' });
-    if (pathname === '/admin') return admin(req, res);
+    if (pathname === '/admin') return admin(req, res, url);
+    if (pathname === '/admin/waitlist.csv') return adminWaitlist(req, res);
     if (pathname === '/admin/report') return adminReport(req, res, url);
     if (pathname === '/webhook/lemon' && req.method === 'POST') {
       const raw = await readBody(req, 1e6);
@@ -370,7 +379,7 @@ const server = createServer(async (req, res) => {
     send(req, res, 404, V.notFound(req, pickLang(req)), 'text/html; charset=utf-8', NOINDEX);
   } catch (e) {
     if (e.status === 413) return send(req, res, 413, 'Payload too large', 'text/plain');
-    console.error(e);
+    console.error(e); failMsg = String(e?.message || e);
     if (!res.headersSent) send(req, res, 500, V.messagePage(req, 'uk', L('uk', 'err_500'), L('uk', 'err_500')), 'text/html; charset=utf-8', NOINDEX);
   }
 });
@@ -387,5 +396,5 @@ server.headersTimeout = 15e3; server.requestTimeout = 30e3; server.keepAliveTime
 server.listen(cfg.port, '0.0.0.0', () => {
   console.log(`VINScope on :${cfg.port} · paywall=${paywallOn() ? `on (${payProvider()})` : 'off (launch mode)'}`);
   startWanted(); startRegistry();
-  store.purgeOld(); setInterval(() => store.purgeOld(), 24 * 3600e3).unref();
+  const purge = () => { store.purgeOld(); purgeHits(); }; purge(); setInterval(purge, 24 * 3600e3).unref();
 });

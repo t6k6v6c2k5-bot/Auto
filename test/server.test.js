@@ -95,3 +95,22 @@ test('гайды: статьи есть на трёх языках, с разм�
     }
   }
 });
+
+test('админка: все вкладки рендерятся, значения ключей не попадают в страницу, пользовательский ввод экранируется', async () => {
+  const { adminPage } = await import('../src/admin-views.js');
+  const { cfg } = await import('../src/config.js');
+  const { track, daily } = await import('../src/analytics.js');
+  cfg.apibaraKey = 'SECRET-KEY-VALUE-123';
+  const req = { method: 'GET', url: '/uk/check?q=%3Cscript%3E', headers: { host: 'x.test', 'user-agent': 'Mozilla/5.0 (iPhone) Mobile', referer: 'https://ref.example/<b>' } };
+  req.evNote = 'invalid';
+  track(req, { statusCode: 302 }, Date.now(), '1.2.3.4');
+  track({ method: 'GET', url: '/uk/<img src=x>', headers: { host: 'x.test', 'user-agent': 'Googlebot' } }, { statusCode: 404 }, Date.now(), '1.2.3.5');
+  assert.equal(daily(3).length, 3);
+  const ctx = { stats: { paid: { c: 0, s: 0 }, byStatus: [], waitlist: 0, searches: 0 }, wanted: { count: 5, updatedAt: new Date().toISOString(), error: null }, cov: { ready: true, records: 10 }, regStatus: {}, paywall: false, provider: '' };
+  for (const tab of ['overview', 'traffic', 'checks', 'orders', 'system']) {
+    const h = adminPage(tab, 7, ctx);
+    assert.match(h, /<title>VINScope — админка/);
+    assert.doesNotMatch(h, /SECRET-KEY-VALUE-123/);
+    assert.doesNotMatch(h, /<img src=x>|<script>/);
+  }
+});
