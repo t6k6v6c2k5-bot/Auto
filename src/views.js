@@ -6,6 +6,7 @@ import { l100, gpkm } from './fueleco.js';
 import { toolsHomeBlock, diffBlock, toolCards } from './tools-views.js';
 import { guidesHomeBlock } from './guides-views.js';
 import { commentsSection } from './comments.js';
+import { normalizePlate } from './plate.js';
 import { TT } from './tools-i18n.js';
 import { providerEnabled } from './providers.js';
 import { insuranceEnabled } from './insurance.js';
@@ -72,7 +73,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=40">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=41">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -561,7 +562,7 @@ export function checkPage(req, lang, r, { full = false, fromPlate = '', early = 
     : `<div class="panel paywall"><h2>${paywallOn() ? ic.lock : ''}${esc(d.paid_h)}</h2><ul class="mini"><li>${ic.check}<span>${esc(d.ua_locked)}</span></li><li>${ic.check}<span>${esc(d.go_pdf)}</span></li></ul><a class="btn primary wide" href="${href}">${cta}</a></div>${waitlistBox(lang)}`;
   const sticky = !full && !hit ? `<div class="stickycta" id="sticky" hidden><a class="btn primary" href="${href}">${cta}</a></div>` : '';
   const secnav = full ? `<nav class="secnav noprint" aria-label="${esc(d.toc_h)}"><div class="wrap">${secs.map(([id, tt]) => `<a href="#${id}">${esc(tt.split(' ').slice(0, 2).join(' '))}</a>`).join('')}</div></nav>` : '';
-  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, r.vin, 'vin', fromPlate)}</div><aside>${aside}</aside></div></section>`;
+  const body = `${vehicleHero(lang, r, d.res_h, fromPlate)}${tiles(lang, r)}${secnav}<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: fromPlate || r.vin, postKind: fromPlate ? 'plate' : 'vin', keys: [r.vin, ...(r.ua?.summary?.plates || []).map(normalizePlate).slice(-3)] })}</div><aside>${aside}</aside></div></section>`;
   return layout(req, lang, { title: `${title} — ${d.res_h} | VINScope`, desc: `${title}: ${d.sub}`, path: '/check', body, noindex: true, sticky, ogUrl: abs(req, `/${lang}/check?q=${encodeURIComponent(r.vin)}`), preconnect: r.photo ? 'https://thumb.wikimedia.org' : '' });
 }
 
@@ -589,7 +590,7 @@ export function plateReport(req, lang, plate, hist, pcov, wanted, photo = null) 
 ${searchForm(lang, '', false, 'b')}<p class="muted sm">${esc(d.sources_note)}</p>`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" ${A}><path d="M15 6l-6 6 6 6"/></svg>${esc(d.back_new)}</a>
 <div class="vehicle${photo ? '' : ' solo'}">${photo ? figureHtml(lang, photo, sub) : ''}<div><p class="eyebrow">${esc(d.plate_h)}</p><h1 class="platebig">${plateEl(plate)}</h1>${sub ? `<p class="plate-sub">${esc(sub)}</p>` : ''}</div></div></div></section>${tilesHtml}
-<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, plate, 'plate')}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
+<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: plate, postKind: 'plate', keys: [plate] })}</div><aside>${actionsBlock(lang)}${waitlistBox(lang)}</aside></div></section>`;
   return layout(req, lang, { title: `${plate} — ${d.plate_h} | VINScope`, desc: d.plate_h, path: '/check', body, noindex: true });
 }
 
@@ -624,7 +625,7 @@ export function rdwReport(req, lang, plate, v, wanted) {
 <div class="notice info">${esc(t.ukNone)} ${esc(t.sub)}</div>${searchForm(lang, '', false, 'b')}`;
   const body = `<section class="hero small result"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a>
 <div class="vehicle${v.photo ? '' : ' solo'}">${v.photo ? figureHtml(lang, v.photo, title) : ''}<div><p class="eyebrow">${esc(t.eyebrow)}</p><h1 class="platebig">${plateEl(plate, false, 'NL')}</h1><p class="plate-sub">${esc(title)}</p></div></div></div></section>
-<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, plate, 'plate')}</div><aside>${actionsBlock(lang)}</aside></div></section>`;
+<section class="sec" style="padding-top:36px"><div class="wrap two"><div>${main}${commentsSection(req, lang, { postKey: plate, postKind: 'plate', keys: [plate] })}</div><aside>${actionsBlock(lang)}</aside></div></section>`;
   return layout(req, lang, { title: `${plate} — ${t.h} | VINScope`, desc: t.sub, path: '/check', body, noindex: true });
 }
 
@@ -632,7 +633,7 @@ export function plateNotFound(req, lang, plate, cov, wanted) {
   const d = dict(lang);
   const w = wanted.length ? `<section class="panel alert" role="alert"><h2>${ic.warn}${esc(d.wanted_hit)}</h2><p>${tel(d.wanted_hit_p)}</p>${wanted.slice(0, 3).map((q) => `<dl class="kv"><dt>${esc(d.w_plate)}</dt><dd>${plateEl(q.plate)}</dd><dt>${esc(d.w_vin)}</dt><dd>${esc(q.vin || q.chassis)}</dd><dt>${esc(d.w_model)}</dt><dd>${esc(q.brand)} ${esc(q.model)}</dd><dt>${esc(d.w_seized)}</dt><dd>${esc(dateOf(q.seized))}</dd><dt>${esc(d.w_unit)}</dt><dd lang="uk">${esc(q.unit)}</dd></dl>`).join('')}</section>` : '';
   const body = `<section class="hero small"><div class="wrap"><a class="crumb" href="/${lang}/">${esc(d.back_new)}</a><p class="eyebrow">${esc(d.res_h)}</p><h1>${plateEl(plate)}</h1></div></section><section class="sec"><div class="wrap narrow">${w}
-<div class="panel"><h2>${esc(d.not_found_plate)}</h2><p>${esc(fmt(d.not_found_plate_p, { from: cov.from || '—', to: cov.to || '—' }))}</p></div>${commentsSection(req, lang, plate, 'plate')}${searchForm(lang, '', false, 'a')}</div></section>`;
+<div class="panel"><h2>${esc(d.not_found_plate)}</h2><p>${esc(fmt(d.not_found_plate_p, { from: cov.from || '—', to: cov.to || '—' }))}</p></div>${commentsSection(req, lang, { postKey: plate, postKind: 'plate', keys: [plate] })}${searchForm(lang, '', false, 'a')}</div></section>`;
   return layout(req, lang, { title: `${plate} — ${d.res_h} | VINScope`, desc: d.not_found_plate, path: '/check', body, noindex: true });
 }
 

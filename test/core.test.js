@@ -225,3 +225,17 @@ test('комментарии: допускаются факты об авто, �
   assert.equal(ok('Нормальный текст про авто и его пробег, достаточно длинный', { cat: 'zzz' }).error, 'cat');
   assert.equal(ok('Нормальный текст про авто и его пробег, достаточно длинный', { key: 'bad key' }).error, 'bad');
 });
+
+
+test('комментарии о поведении на дороге: только по номеру, без личности водителя', async () => {
+  const { validateComment } = await import('../src/comments.js');
+  const plate = { key: 'AA1234BB', kind: 'plate', cat: 'road_cutoff' };
+  const ok = (text, extra = {}) => validateComment({ ...plate, text, ...extra });
+  assert.equal(ok('Сегодня утром на кольце подрезал меня и не включил поворотник, едва избежали удара.').ok, true);
+  assert.equal(ok('Припаркован на тротуаре у входа в магазин уже второй день подряд, пешеходам не пройти.', { cat: 'road_parking' }).ok, true);
+  assert.equal(ok('Знаю владельца этого авто, ездит агрессивно и вообще плохой человек, берегитесь его.').error, 'person');
+  assert.equal(ok('Водитель Иван постоянно нарушает и живёт на соседней улице, видел его не раз.').error, 'person');
+  assert.equal(ok('Подрезал меня на кольце и не включил поворотник, едва не случилась авария.', { kind: 'vin', key: '1HGCM82633A004352' }).error, 'cat');
+  const car = validateComment({ key: '1HGCM82633A004352', kind: 'vin', cat: 'docs', text: 'У авто уже было три владельца за два года, документы оформляли через разных посредников.' });
+  assert.equal(car.ok, true); // «владельцы» в истории авто допустимы вне дорожных тем
+});
