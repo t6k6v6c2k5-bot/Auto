@@ -541,3 +541,8 @@ ul.scams{margin-left:auto;margin-right:auto}
 .guide small{color:var(--link)}
 /* длинные английские тексты данных (кампании, компоненты) переносятся, а не раздвигают страницу */
 .panel span[lang=en],.panel li b,.panel li span{overflow-wrap:anywhere}
+/* цели касания 44 px там, где хватает места */
+.foot-col a{padding:12px 0}.foot-col{gap:0}
+.examples button,.recent a{min-height:44px}
+@media(min-width:380px){.langs a{min-height:44px;min-width:44px}}
+@media(max-width:860px){.sheet a,.nav a{min-height:44px}}
