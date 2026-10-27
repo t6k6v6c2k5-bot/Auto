@@ -166,4 +166,15 @@
     rev.forEach((el) => io.observe(el));
   } else rev.forEach((el) => el.classList.add('in'));
   if (location.hash === '#notify') track('pricing_notify_click');
+
+  // ---------- Кнопка «Наверх»: появляется после прокрутки на пару экранов ----------
+  const up = $('#totop');
+  if (up) {
+    const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let tick = false;
+    const sync = () => { tick = false; const on = window.scrollY > Math.max(600, innerHeight * 0.9); if (up.hidden === on) up.hidden = !on; up.classList.toggle('on', on); };
+    addEventListener('scroll', () => { if (!tick) { tick = true; requestAnimationFrame(sync); } }, { passive: true });
+    up.addEventListener('click', () => { scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' }); const m = $('#main'); if (m) setTimeout(() => m.focus({ preventScroll: true }), calm ? 0 : 450); });
+    sync();
+  }
 })();

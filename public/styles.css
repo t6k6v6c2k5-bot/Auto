@@ -424,3 +424,11 @@ footer{margin-top:0}
 .legal{display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;border-top:1px solid rgba(255,255,255,.08);padding:18px var(--gut) calc(22px + env(safe-area-inset-bottom));font-size:12.5px;line-height:1.5;color:#7f93b3}
 @media(max-width:860px){.foot{grid-template-columns:1fr 1fr;gap:26px 24px;padding-top:36px}.foot-col{max-width:none}.foot-brand{grid-column:1/-1}}
 @media(max-width:420px){.legal{flex-direction:column;gap:4px}.foot-col a{font-size:14.5px}}
+
+/* кнопка «Наверх» */
+.totop{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:55;display:grid;place-items:center;width:48px;height:48px;padding:0;border:0;border-radius:50%;background:linear-gradient(180deg,#ffc24a,#ffa41b);color:#0b1220;box-shadow:0 6px 18px rgba(2,8,23,.4),0 0 0 1px rgba(255,255,255,.25) inset;cursor:pointer;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s,background .2s;-webkit-tap-highlight-color:transparent}
+.totop[hidden]{display:none}.totop.on{opacity:1;transform:none}.totop:hover{filter:brightness(1.06)}.totop:active{transform:scale(.94)}.totop:focus-visible{outline:3px solid var(--amber,#ffb020);outline-offset:3px}
+@media(max-width:860px){body:has(.stickycta) .totop{bottom:calc(84px + env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){.totop{transition:none}}
+@media print{.totop{display:none!important}}
+@media(max-width:860px){.legal{padding-right:calc(var(--gut) + 56px)}}
