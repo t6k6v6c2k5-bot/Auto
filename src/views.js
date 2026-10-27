@@ -68,7 +68,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=17">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=19">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -79,10 +79,12 @@ ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}"
 <details class="menu"><summary aria-label="${esc(t(lang, 'menu'))}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ${A}><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary><nav class="sheet" aria-label="${esc(t(lang, 'nav_label'))}">${links.map(([h, k]) => `<a href="/${lang}${h}"${cur(h)}>${esc(t(lang, k))}</a>`).join('')}<a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a></nav></details>
 </div></header>
 <main id="main" tabindex="-1">${body}</main>
-<footer><div class="wrap foot"><div>${logo}<b>VINScope</b><p>${esc(t(lang, 'footer'))}</p></div>
-
-<div><p class="foot-h">VINScope</p><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/guides">${esc(t(lang, 'nav_guides'))}</a><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a><a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</div></div>
-<div class="wrap legal">© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''} · ${esc(t(lang, 'sources_note'))}</div></footer>
+<footer><div class="wrap foot">
+<div class="foot-brand"><a class="foot-logo" href="/${lang}/" aria-label="VINScope">${logo}<b>VINScope</b></a><p>${esc(t(lang, 'footer'))}</p></div>
+<nav class="foot-col" aria-label="${esc(t(lang, 'f_checks'))}"><p class="foot-h">${esc(t(lang, 'f_checks'))}</p><a href="/${lang}/wanted">${esc(t(lang, 'lp_wanted_link'))}</a><a href="/${lang}/plate">${esc(t(lang, 'lp_plate_link'))}</a><a href="/${lang}/usa">${esc(t(lang, 'nav_usa'))}</a><a href="/${lang}/tools">${esc(t(lang, 'nav_tools'))}</a><a href="/${lang}/guides">${esc(t(lang, 'nav_guides'))}</a></nav>
+<nav class="foot-col" aria-label="${esc(t(lang, 'f_about'))}"><p class="foot-h">${esc(t(lang, 'f_about'))}</p>${paywallOn() ? `<a href="/${lang}/pricing">${esc(t(lang, 'nav_pricing'))}</a>` : ''}<a href="/${lang}/terms">${esc(t(lang, 'f_terms'))}</a>${cfg.supportEmail ? `<a href="mailto:${esc(cfg.supportEmail)}">${esc(cfg.supportEmail)}</a>` : ''}</nav>
+</div>
+<div class="wrap legal"><span>© ${new Date().getFullYear()} VINScope${cfg.operatorName ? ` · ${esc(cfg.operatorName)}` : ''}</span><span>${esc(t(lang, 'sources_note'))}</span></div></footer>
 ${sticky}
 <div class="loader" id="loader" hidden role="status" aria-live="polite" tabindex="-1" data-text="${esc(t(lang, 'loader_text'))}"><div><div class="spin" ${A}></div><p></p></div></div>
 <script src="/app.js?v=5" defer data-lang="${lang}"></script></body></html>`;
