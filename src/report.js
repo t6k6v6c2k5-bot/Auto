@@ -77,9 +77,9 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
     withProvider ? withDeadline(findMentions({ vin, plate }).catch(() => null), 4500, null) : null,
     photoP,
     // рыночная цена в Украине (бесплатный источник с кэшем): отчёт не ждёт дольше пары секунд
-    // рыночная цена тратит ограниченную квоту источника, поэтому она в платном отчёте, а не в бесплатной проверке
-    withProvider && wantMarket && veh.make && veh.model && veh.year ? withDeadline(marketPrice(veh), 3500, null) : null,
-    withProvider ? withDeadline(nbuRate('USD').catch(() => null), 2500, null) : null,
+    // рыночная цена в Украине — бесплатная часть проверки; квоту источника бережём кэшем, потолками и тем, что боты её не запрашивают
+    wantMarket && veh.make && veh.model && veh.year ? withDeadline(marketPrice(veh), 3500, null) : null,
+    withDeadline(nbuRate('USD').catch(() => null), 2500, null),
     // параметры авто по VIN из объявлений — платный метод, поэтому только в оплаченном отчёте
     withProvider ? withDeadline(adsByVin(vin), 9500, null) : null,
   ]);
