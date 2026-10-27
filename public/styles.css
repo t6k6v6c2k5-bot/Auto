@@ -539,3 +539,5 @@ ul.scams{margin-left:auto;margin-right:auto}
 .examples button{min-height:40px;padding-top:8px;padding-bottom:8px}
 .foot-col a{padding:9px 0}
 .guide small{color:var(--link)}
+/* длинные английские тексты данных (кампании, компоненты) переносятся, а не раздвигают страницу */
+.panel span[lang=en],.panel li b,.panel li span{overflow-wrap:anywhere}

@@ -36,6 +36,8 @@ const split = (parts, big, small) => ({ n: parts.filter((x) => big.includes(x.ty
 const compact = (lang, n) => split(new Intl.NumberFormat(LOC[lang], { notation: 'compact', maximumFractionDigits: 1 }).formatToParts(n), ['integer', 'decimal', 'fraction', 'group'], ['compact']);
 const shortDate = (lang, iso) => { const t = Date.parse(iso); return t ? split(new Intl.DateTimeFormat(LOC[lang], { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' }).formatToParts(t), ['day'], ['month']) : { n: '—', u: '' }; };
 const stat = (lang, exact, short, label) => `<div title="${esc(exact)}"><b aria-label="${esc(exact)}">${esc(short.n)}${short.u ? `<i> ${esc(short.u)}</i>` : ''}</b><span>${esc(label)}</span></div>`;
+// «ELECTRICAL SYSTEM:PROPULSION SYSTEM:CHARGING» -> читаемая строка, которая умеет переноситься
+const comp = (c) => String(c || '').replace(/:/g, ' · ').replace(/\//g, '/\u200b');
 const dateOf = (iso) => (iso ? String(iso).slice(0, 10) : '—');
 
 // ---------- иконки (декоративные: aria-hidden) ----------
@@ -69,7 +71,7 @@ export function layout(req, lang, { title, desc, path, body, noindex, jsonld = [
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}"><meta name="twitter:image" content="${esc(og)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-512.png">
 <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=29">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
+<link rel="stylesheet" href="/styles.css?v=30">${preconnect ? `<link rel="preconnect" href="${esc(preconnect)}">` : ''}${ld}
 ${cfg.plausible && !noindex ? `<script defer data-domain="${esc(cfg.plausible)}" src="https://plausible.io/js/script.js"></script>` : ''}
 </head><body>
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
@@ -315,12 +317,12 @@ function decodeBlock(lang, r) {
 const starsOf = (v, d) => (/^\d$/.test(String(v)) ? `<span aria-hidden="true" class="stars">${'★'.repeat(+v)}${'☆'.repeat(5 - +v)}</span><span class="sr-only">${v} ${esc(d.stars)}</span> <span class="muted sm" aria-hidden="true">${v} ${esc(d.stars)}</span>` : `<span class="muted">${esc(d.nr)}</span>`);
 function safetyBlock(lang, r, full) {
   const d = dict(lang); const rec = r.recalls, c = r.complaints, rt = r.ratings;
-  const item = (x, long) => `<li><b>${en(lang, x.component)}</b><span lang="en">${esc((x.summary || '').slice(0, long ? 260 : 200))}…</span></li>`;
+  const item = (x, long) => `<li><b>${en(lang, comp(x.component))}</b><span lang="en">${esc((x.summary || '').slice(0, long ? 260 : 200))}…</span></li>`;
   const head = rec.items.slice(0, full ? 3 : 3), tail = full ? rec.items.slice(3) : [];
   const recHtml = rec.items.length
     ? `<p><b>${esc(d.open_recalls)}${rec.items.length}</b></p><ul class="recalls">${head.map((x) => item(x, full)).join('')}</ul>${tail.length ? `<details><summary>${esc(fmt(d.recalls_more, { n: rec.items.length }))}</summary><ul class="recalls">${tail.map((x) => item(x, true)).join('')}</ul></details>` : ''}<p class="muted sm">${esc(d.nhtsa_en)} ${esc(d.recalls_check)}</p>`
     : r.decoded.trusted ? `<p class="good">${ic.check}<span>${esc(d.none_recalls)}</span></p>` : `<p class="muted">${esc(d.sr_dev)}</p>`;
-  const compHtml = c.count ? `<p><b>${esc(fmt(d.comp_n, { n: c.count }))}</b></p><p class="muted sm">${esc(fmt(d.comp_stats, { c: c.crashes, f: c.fires, i: c.injuries, d: c.deaths }))}</p><p class="sm">${esc(d.comp_top)}: ${c.top.map((x) => `${en(lang, x.component)} (${x.n})`).join(', ')}</p><p class="muted sm">${esc(d.comp_note)}</p>` : `<p class="muted">${r.decoded.trusted ? esc(d.none_comp) : esc(d.sr_dev)}</p>`;
+  const compHtml = c.count ? `<p><b>${esc(fmt(d.comp_n, { n: c.count }))}</b></p><p class="muted sm">${esc(fmt(d.comp_stats, { c: c.crashes, f: c.fires, i: c.injuries, d: c.deaths }))}</p><p class="sm">${esc(d.comp_top)}: ${c.top.map((x) => `${en(lang, comp(x.component))} (${x.n})`).join(', ')}</p><p class="muted sm">${esc(d.comp_note)}</p>` : `<p class="muted">${r.decoded.trusted ? esc(d.none_comp) : esc(d.sr_dev)}</p>`;
   let rateHtml = '';
   if (rt) {
     const all = [rt.overall, rt.front, rt.side, rt.rollover];
