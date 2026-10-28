@@ -83,7 +83,7 @@ async function buildReportFresh(vin, { withProvider = false, plan = 'single', pl
     // параметры авто по VIN из объявлений — платный метод, поэтому только в оплаченном отчёте
     withProvider ? withDeadline(adsByVin(vin), 9500, null) : null,
     // есть ли сейчас объявление с этим VIN: факт и дата — бесплатно, детали — в платной части; ботам не отдаём квоту
-    wantMarket ? withDeadline(listingsByVin(vin), 6500, null) : null,
+    wantMarket ? withDeadline(listingsByVin(vin), 3500, null) : null,
   ]);
   const mismatch = consistency(decoded, ua);
   const usa = await usaP;
